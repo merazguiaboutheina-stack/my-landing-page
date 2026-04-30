@@ -10,7 +10,8 @@ const STORAGE = {
   lastResult: "virtulabLastResult",
   teacherLogged: "virtulabTeacherLogged",
   labCodes: "virtulabLabCodes",
-  activeLabCode: "virtulabActiveLabCode"
+  activeLabCode: "virtulabActiveLabCode",
+  students: "virtulabStudents"
 };
 
 const SUBJECTS = {
@@ -326,10 +327,10 @@ const EXPERIMENTS = {
 };
 
 const DEMO_RECORDS = [
-  { studentName: "Ahmed B.", classCode: "CEM2026", experimentId: "circuit", score: 85, aiEvaluation: { fr: "Tres bien", ar: "جيد جدا" }, errors: [{ fr: "Placement initial du voltmetre a corriger.", ar: "تم تصحيح موضع الفولتميتر في البداية." }] },
-  { studentName: "Sara M.", classCode: "CEM2026", experimentId: "plante", score: 72, aiEvaluation: { fr: "Bien", ar: "جيد" }, errors: [{ fr: "Observation faite avant la preparation complete.", ar: "تمت الملاحظة قبل إنهاء التحضير الكامل." }] },
-  { studentName: "Youssef K.", classCode: "LYC2025", experimentId: "chimie", score: 90, aiEvaluation: { fr: "Excellent", ar: "ممتاز" }, errors: [{ fr: "Manipulation maitrissee avec rigueur.", ar: "المناولة كانت متقنة ومنظمة." }] },
-  { studentName: "Fatima Z.", classCode: "CEM2026", experimentId: "masse", score: 60, aiEvaluation: { fr: "A renforcer", ar: "يحتاج دعما" }, errors: [{ fr: "Equilibre valide apres plusieurs essais.", ar: "تم الوصول إلى التوازن بعد عدة محاولات." }] }
+  { studentName: "Ahmed B.", classCode: "CEM2026", level: "cem", experimentId: "circuit", score: 85, aiEvaluation: { fr: "Tres bien", ar: "جيد جدا" }, errors: [{ fr: "Placement initial du voltmetre a corriger.", ar: "تم تصحيح موضع الفولتميتر في البداية." }] },
+  { studentName: "Sara M.", classCode: "CEM2026", level: "cem", experimentId: "plante", score: 72, aiEvaluation: { fr: "Bien", ar: "جيد" }, errors: [{ fr: "Observation faite avant la preparation complete.", ar: "تمت الملاحظة قبل إنهاء التحضير الكامل." }] },
+  { studentName: "Youssef K.", classCode: "LYC2025", level: "lycee", experimentId: "chimie", score: 90, aiEvaluation: { fr: "Excellent", ar: "ممتاز" }, errors: [{ fr: "Manipulation maitrissee avec rigueur.", ar: "المناولة كانت متقنة ومنظمة." }] },
+  { studentName: "Fatima Z.", classCode: "CEM2026", level: "cem", experimentId: "masse", score: 60, aiEvaluation: { fr: "A renforcer", ar: "يحتاج دعما" }, errors: [{ fr: "Equilibre valide apres plusieurs essais.", ar: "تم الوصول إلى التوازن بعد عدة محاولات." }] }
 ];
 
 const LAB_DETAILS = {
@@ -948,11 +949,21 @@ function initStudentForm() {
       alert(getText({ fr: "Ecris ton prenom pour continuer.", ar: "اكتب اسمك للمتابعة." }));
       return;
     }
-    localStorage.setItem(STORAGE.studentName, `${firstName} ${lastName}`.trim());
+    const fullName = `${firstName} ${lastName}`.trim();
+    const resolvedLevel = assignment ? assignment.level : level;
+    localStorage.setItem(STORAGE.studentName, fullName);
     localStorage.setItem(STORAGE.studentClass, classCode);
-    localStorage.setItem(STORAGE.currentLevel, assignment ? assignment.level : level);
+    localStorage.setItem(STORAGE.currentLevel, resolvedLevel);
     localStorage.removeItem(STORAGE.currentSubject);
     localStorage.removeItem(STORAGE.activeLabCode);
+    const students = readJson(STORAGE.students, []);
+    const existingIdx = students.findIndex((s) => s.name === fullName && s.classCode === classCode);
+    if (existingIdx === -1) {
+      students.push({ name: fullName, classCode, level: resolvedLevel });
+    } else {
+      students[existingIdx].level = resolvedLevel;
+    }
+    localStorage.setItem(STORAGE.students, JSON.stringify(students));
 
     if (assignment) {
       const subject = subjectForExperiment(assignment.experimentId, assignment.level);
@@ -1906,36 +1917,80 @@ function getTeacherRows() {
   const rows = [...DEMO_RECORDS];
   const studentName = localStorage.getItem(STORAGE.studentName);
   const studentClass = localStorage.getItem(STORAGE.studentClass) || "CEM2026";
+  const studentLevel = normalizeLevelKey(localStorage.getItem(STORAGE.currentLevel) || "cem");
   const experimentScores = readJson(STORAGE.experimentScores, {});
   const lastResult = readJson(STORAGE.lastResult, null);
-  if (studentName) {
-    Object.entries(experimentScores).forEach(([experimentId, score]) => {
+  const scoreEntries = Object.entries(experimentScores);
+  if (studentName && scoreEntries.length > 0) {
+    scoreEntries.forEach(([experimentId, score]) => {
       rows.push({
         studentName,
         classCode: studentClass,
+        level: studentLevel,
         experimentId,
         score,
         aiEvaluation: scoreToBadge(score),
         errors: lastResult && lastResult.experimentId === experimentId ? lastResult.errors : [getExperimentConfig(experimentId).defaultTip]
       });
     });
+  } else if (studentName && scoreEntries.length === 0) {
+    rows.push({
+      studentName,
+      classCode: studentClass,
+      level: studentLevel,
+      experimentId: null,
+      score: 0,
+      aiEvaluation: { fr: "En attente", ar: "في الانتظار" },
+      errors: []
+    });
   }
+  const registeredStudents = readJson(STORAGE.students, []);
+  registeredStudents.forEach((student) => {
+    const alreadyListed = rows.some((r) => r.studentName === student.name && r.classCode === student.classCode);
+    if (!alreadyListed) {
+      rows.push({
+        studentName: student.name,
+        classCode: student.classCode,
+        level: normalizeLevelKey(student.level || "cem"),
+        experimentId: null,
+        score: 0,
+        aiEvaluation: { fr: "En attente", ar: "في الانتظار" },
+        errors: []
+      });
+    }
+  });
   return rows;
 }
 
 function renderTeacherDetail(record) {
   const detail = document.getElementById("student-detail");
   if (!detail) return;
+  const levelLabel = LEVEL_LABELS[record.level] || LEVEL_LABELS.cem;
+  const levelDisplay = getText(levelLabel);
+  const scoreColor = record.score >= 80 ? "#16a34a" : record.score >= 60 ? "#d97706" : "#dc2626";
+  if (!record.experimentId) {
+    detail.innerHTML = `
+      <h3 style="margin:0 0 10px;color:var(--navy)">${escapeHtml(record.studentName)}</h3>
+      <div class="detail-stat-grid">
+        <div class="detail-stat"><div class="detail-stat-label">${dualText("Classe", "القسم")}</div><div class="detail-stat-value">${escapeHtml(record.classCode)}</div></div>
+        <div class="detail-stat"><div class="detail-stat-label">${dualText("Niveau", "المستوى")}</div><div class="detail-stat-value">${escapeHtml(levelDisplay)}</div></div>
+      </div>
+      <div class="quiz-feedback"><strong>${dualText("Statut", "الحالة")}</strong><p>${dualText("Aucune experience completee pour le moment.", "لا توجد تجربة منجزة حتى الآن.")}</p></div>
+    `;
+    return;
+  }
   const experiment = getExperimentConfig(record.experimentId);
   detail.innerHTML = `
-    <h3>${escapeHtml(record.studentName)}</h3>
-    <p>${escapeHtml(getText({ fr: `Classe : ${record.classCode}`, ar: `القسم: ${record.classCode}` }))}</p>
-    <p>${escapeHtml(getText({ fr: `Experience : ${experiment.title.fr}`, ar: `التجربة: ${experiment.title.ar}` }))}</p>
-    <p>${escapeHtml(getText({ fr: `Score : ${record.score}%`, ar: `النتيجة: ${record.score}%` }))}</p>
-    <p>${escapeHtml(getText({ fr: `Evaluation IA : ${record.aiEvaluation.fr}`, ar: `تقييم الذكاء الاصطناعي: ${record.aiEvaluation.ar}` }))}</p>
-    <div class="quiz-feedback"><strong>${dualText("Experiences completees", "التجارب المنجزة")}</strong><p>${escapeHtml(getText(experiment.title))}</p></div>
+    <h3 style="margin:0 0 10px;color:var(--navy)">${escapeHtml(record.studentName)}</h3>
+    <div class="detail-stat-grid">
+      <div class="detail-stat"><div class="detail-stat-label">${dualText("Classe", "القسم")}</div><div class="detail-stat-value">${escapeHtml(record.classCode)}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">${dualText("Niveau", "المستوى")}</div><div class="detail-stat-value">${escapeHtml(levelDisplay)}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">${dualText("Score", "النتيجة")}</div><div class="detail-stat-value" style="color:${scoreColor}">${escapeHtml(String(record.score))}%<div class="detail-score-bar"><div class="detail-score-fill" style="width:${record.score}%;background:${scoreColor}"></div></div></div></div>
+      <div class="detail-stat"><div class="detail-stat-label">${dualText("Evaluation IA", "التقييم")}</div><div class="detail-stat-value" style="font-size:0.9rem">${escapeHtml(getText(record.aiEvaluation))}</div></div>
+    </div>
+    <div class="quiz-feedback"><strong>${dualText("Experience", "التجربة")}</strong><p>${escapeHtml(getText(experiment.title))}</p></div>
     <div class="quiz-feedback"><strong>${dualText("Erreurs frequentes", "الأخطاء المتكررة")}</strong><p>${escapeHtml(getText(record.errors[0] || { fr: "Aucune erreur notable.", ar: "لا توجد أخطاء بارزة." }))}</p></div>
-    <div class="quiz-feedback"><strong>${dualText("Texte d'evaluation", "نص التقييم")}</strong><p>${escapeHtml(getText({ fr: "L'analyse montre une progression utile avec des points de consolidation cibles.", ar: "يظهر التحليل تقدما جيدا مع نقاط محددة تحتاج إلى تدعيم." }))}</p></div>
+    <div class="quiz-feedback"><strong>${dualText("Analyse", "التحليل")}</strong><p>${escapeHtml(getText({ fr: "L'analyse montre une progression utile avec des points de consolidation cibles.", ar: "يظهر التحليل تقدما جيدا مع نقاط محددة تحتاج إلى تدعيم." }))}</p></div>
   `;
 }
 
