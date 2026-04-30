@@ -1,10 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VirtuLab - Tableau de bord enseignant</title>
-  <link rel="icon" href="favicon.ico">
+  <link rel="icon" href="favicon.svg">
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-page="teacher-dashboard" data-lang="fr">
@@ -14,14 +14,14 @@
         <span class="brand-mark">V</span>
         <span>
           <strong>VirtuLab</strong>
-          <small><span class="lang-fr">Plateforme de laboratoire intelligent</span><span class="lang-ar">منصة المختبر الذكي الافتراضي</span></small>
+          <small><span class="lang-fr">Plateforme de laboratoire intelligent</span><span class="lang-ar">Ù…Ù†ØµØ© Ø§Ù„Ù…Ø®ØªØ¨Ø± Ø§Ù„Ø°ÙƒÙŠ Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠ</span></small>
         </span>
       </a>
       <button class="menu-toggle" type="button" aria-label="Menu"><span></span><span></span><span></span></button>
       <div class="topbar-nav">
-        <div class="student-pill"><span class="lang-fr">Profil</span><span class="lang-ar">الملف</span><strong data-student-display></strong></div>
+        <div class="student-pill"><span class="lang-fr">Profil</span><span class="lang-ar">Ø§Ù„Ù…Ù„Ù</span><strong data-student-display></strong></div>
         <div class="lang-switch"><button type="button" class="lang-btn" data-lang="fr">FR</button><button type="button" class="lang-btn" data-lang="ar">AR</button></div>
-        <button type="button" class="secondary-btn logout-btn"><span class="lang-fr">Se deconnecter</span><span class="lang-ar">تسجيل الخروج</span></button>
+        <button type="button" class="secondary-btn logout-btn"><span class="lang-fr">Se deconnecter</span><span class="lang-ar">ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬</span></button>
       </div>
     </div>
   </header>
@@ -29,8 +29,8 @@
   <main class="page-shell">
     <section class="page-intro fade-up">
       <span class="eyebrow">VirtuLab</span>
-      <h1><span class="lang-fr">Tableau de bord enseignant</span><span class="lang-ar">لوحة الأستاذ</span></h1>
-      <p><span class="lang-fr">Consultez les resultats, filtrez une classe et ouvrez le detail d'un eleve.</span><span class="lang-ar">اطلع على النتائج، صفِّ البيانات حسب القسم، وافتح تفاصيل كل متعلم.</span></p>
+      <h1><span class="lang-fr">Tableau de bord enseignant</span><span class="lang-ar">Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ø³ØªØ§Ø°</span></h1>
+      <p><span class="lang-fr">Consultez les resultats, filtrez une classe et ouvrez le detail d'un eleve.</span><span class="lang-ar">Ø§Ø·Ù„Ø¹ Ø¹Ù„Ù‰ Ø§Ù„Ù†ØªØ§Ø¦Ø¬ØŒ ØµÙÙ‘Ù Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø­Ø³Ø¨ Ø§Ù„Ù‚Ø³Ù…ØŒ ÙˆØ§ÙØªØ­ ØªÙØ§ØµÙŠÙ„ ÙƒÙ„ Ù…ØªØ¹Ù„Ù….</span></p>
     </section>
 
     <section class="teacher-layout">
@@ -38,21 +38,21 @@
         <div class="toolbar">
           <label class="filter-field">
             <span class="lang-fr">Filtrer par code classe</span>
-            <span class="lang-ar">التصفية حسب رمز القسم</span>
-            <input type="text" id="class-filter" data-placeholder-fr="Exemple : CEM2026" data-placeholder-ar="مثال: CEM2026">
+            <span class="lang-ar">Ø§Ù„ØªØµÙÙŠØ© Ø­Ø³Ø¨ Ø±Ù…Ø² Ø§Ù„Ù‚Ø³Ù…</span>
+            <input type="text" id="class-filter" data-placeholder-fr="Exemple : CEM2026" data-placeholder-ar="Ù…Ø«Ø§Ù„: CEM2026">
           </label>
-          <button type="button" class="secondary-btn" id="sort-score-btn"><span class="lang-fr">Trier par score</span><span class="lang-ar">ترتيب حسب النتيجة</span></button>
+          <button type="button" class="secondary-btn" id="sort-score-btn"><span class="lang-fr">Trier par score</span><span class="lang-ar">ØªØ±ØªÙŠØ¨ Ø­Ø³Ø¨ Ø§Ù„Ù†ØªÙŠØ¬Ø©</span></button>
         </div>
-        <div class="teacher-meta"><div class="badge badge-light"><span class="lang-fr">Code classe enseignant : CEM2026</span><span class="lang-ar">رمز قسم الأستاذ: CEM2026</span></div></div>
+        <div class="teacher-meta"><div class="badge badge-light"><span class="lang-fr">Code classe enseignant : CEM2026</span><span class="lang-ar">Ø±Ù…Ø² Ù‚Ø³Ù… Ø§Ù„Ø£Ø³ØªØ§Ø°: CEM2026</span></div></div>
         <div class="table-wrap">
           <table class="results-table">
             <thead>
               <tr>
-                <th><span class="lang-fr">Nom eleve</span><span class="lang-ar">اسم المتعلم</span></th>
-                <th><span class="lang-fr">Classe</span><span class="lang-ar">القسم</span></th>
-                <th><span class="lang-fr">Experience</span><span class="lang-ar">التجربة</span></th>
-                <th><span class="lang-fr">Score</span><span class="lang-ar">النتيجة</span></th>
-                <th><span class="lang-fr">Evaluation IA</span><span class="lang-ar">تقييم الذكاء الاصطناعي</span></th>
+                <th><span class="lang-fr">Nom eleve</span><span class="lang-ar">Ø§Ø³Ù… Ø§Ù„Ù…ØªØ¹Ù„Ù…</span></th>
+                <th><span class="lang-fr">Classe</span><span class="lang-ar">Ø§Ù„Ù‚Ø³Ù…</span></th>
+                <th><span class="lang-fr">Experience</span><span class="lang-ar">Ø§Ù„ØªØ¬Ø±Ø¨Ø©</span></th>
+                <th><span class="lang-fr">Score</span><span class="lang-ar">Ø§Ù„Ù†ØªÙŠØ¬Ø©</span></th>
+                <th><span class="lang-fr">Evaluation IA</span><span class="lang-ar">ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ</span></th>
               </tr>
             </thead>
             <tbody id="teacher-table-body"></tbody>
@@ -63,13 +63,13 @@
       <aside class="side-stack">
         <article class="panel-card fade-up delay-2">
           <div class="panel-head">
-            <h2><span class="lang-fr">Code pour les eleves</span><span class="lang-ar">رمز للتلاميذ</span></h2>
-            <p><span class="lang-fr">Creez un code simple. L'eleve le saisit au depart et voit seulement l'activite choisie.</span><span class="lang-ar">أنشئ رمزا بسيطا. يدخله التلميذ في البداية فيرى النشاط المختار فقط.</span></p>
+            <h2><span class="lang-fr">Code pour les eleves</span><span class="lang-ar">Ø±Ù…Ø² Ù„Ù„ØªÙ„Ø§Ù…ÙŠØ°</span></h2>
+            <p><span class="lang-fr">Creez un code simple. L'eleve le saisit au depart et voit seulement l'activite choisie.</span><span class="lang-ar">Ø£Ù†Ø´Ø¦ Ø±Ù…Ø²Ø§ Ø¨Ø³ÙŠØ·Ø§. ÙŠØ¯Ø®Ù„Ù‡ Ø§Ù„ØªÙ„Ù…ÙŠØ° ÙÙŠ Ø§Ù„Ø¨Ø¯Ø§ÙŠØ© ÙÙŠØ±Ù‰ Ø§Ù„Ù†Ø´Ø§Ø· Ø§Ù„Ù…Ø®ØªØ§Ø± ÙÙ‚Ø·.</span></p>
           </div>
           <form id="lab-code-form" class="code-generator-form">
             <label>
               <span class="lang-fr">Niveau</span>
-              <span class="lang-ar">المستوى</span>
+              <span class="lang-ar">Ø§Ù„Ù…Ø³ØªÙˆÙ‰</span>
               <select name="codeLevel">
                 <option value="primary">Primaire</option>
                 <option value="cem" selected>CEM</option>
@@ -78,7 +78,7 @@
             </label>
             <label>
               <span class="lang-fr">Activite</span>
-              <span class="lang-ar">النشاط</span>
+              <span class="lang-ar">Ø§Ù„Ù†Ø´Ø§Ø·</span>
               <select name="codeExperiment">
                 <option value="plante">Absorption de l'eau par la plante</option>
                 <option value="circuit">Circuit electrique</option>
@@ -86,23 +86,23 @@
                 <option value="chimie">Reaction produisant l'hydrogene</option>
               </select>
             </label>
-            <button type="submit" class="primary-btn"><span class="lang-fr">Creer le code</span><span class="lang-ar">إنشاء الرمز</span></button>
+            <button type="submit" class="primary-btn"><span class="lang-fr">Creer le code</span><span class="lang-ar">Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø±Ù…Ø²</span></button>
           </form>
           <div id="lab-code-list" class="generated-code-list"></div>
         </article>
 
         <article class="panel-card fade-up delay-2">
           <div class="panel-head">
-            <h2><span class="lang-fr">Detail eleve</span><span class="lang-ar">تفاصيل المتعلم</span></h2>
-            <p><span class="lang-fr">Cliquez sur une ligne du tableau pour afficher l'analyse detaillee.</span><span class="lang-ar">انقر على سطر في الجدول لعرض التحليل المفصل.</span></p>
+            <h2><span class="lang-fr">Detail eleve</span><span class="lang-ar">ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù…ØªØ¹Ù„Ù…</span></h2>
+            <p><span class="lang-fr">Cliquez sur une ligne du tableau pour afficher l'analyse detaillee.</span><span class="lang-ar">Ø§Ù†Ù‚Ø± Ø¹Ù„Ù‰ Ø³Ø·Ø± ÙÙŠ Ø§Ù„Ø¬Ø¯ÙˆÙ„ Ù„Ø¹Ø±Ø¶ Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ù…ÙØµÙ„.</span></p>
           </div>
           <div id="student-detail" class="detail-card"></div>
         </article>
 
         <article class="panel-card fade-up delay-3">
           <div class="panel-head">
-            <h2><span class="lang-fr">AI Insights</span><span class="lang-ar">رؤى الذكاء الاصطناعي</span></h2>
-            <p><span class="lang-fr">Resume automatique des performances du groupe.</span><span class="lang-ar">ملخص آلي لأداء المجموعة.</span></p>
+            <h2><span class="lang-fr">AI Insights</span><span class="lang-ar">Ø±Ø¤Ù‰ Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ</span></h2>
+            <p><span class="lang-fr">Resume automatique des performances du groupe.</span><span class="lang-ar">Ù…Ù„Ø®Øµ Ø¢Ù„ÙŠ Ù„Ø£Ø¯Ø§Ø¡ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø©.</span></p>
           </div>
           <div id="teacher-insights" class="insights-list"></div>
         </article>

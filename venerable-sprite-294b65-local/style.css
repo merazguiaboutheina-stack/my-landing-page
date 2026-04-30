@@ -122,16 +122,37 @@ button {
 }
 
 .brand-mark {
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, var(--primary), var(--teal));
   color: var(--white);
   font-weight: 800;
-  font-size: 1.2rem;
+  font-size: 0;
   box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-mark::before {
+  content: "⚗";
+  position: relative;
+  z-index: 1;
+  font-size: 1.85rem;
+  line-height: 1;
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  top: -9px;
+  inset-inline-end: -8px;
 }
 
 .topbar-nav {
@@ -745,22 +766,30 @@ body[data-lang="ar"] .visual-subject-card {
 }
 
 .experiment-shell {
-  max-width: 1380px;
-  padding-top: 18px;
+  max-width: 1220px;
+  padding-top: 28px;
   padding-bottom: 24px;
 }
 
 .experiment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  align-items: end;
   gap: 18px;
-  margin-bottom: 16px;
+  margin-bottom: 22px;
+  padding: clamp(18px, 4vw, 34px);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(76, 175, 80, 0.18), transparent 26%),
+    radial-gradient(circle at 86% 26%, rgba(33, 150, 243, 0.2), transparent 30%),
+    linear-gradient(135deg, #f7fbff, #eef8f2);
+  box-shadow: 0 16px 36px rgba(16, 59, 115, 0.08);
 }
 
 .experiment-header h1 {
-  font-size: clamp(1.9rem, 4vw, 3rem);
-  max-width: 20ch;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  max-width: 22ch;
+  overflow-wrap: anywhere;
 }
 
 .progress-wrap {
@@ -797,8 +826,8 @@ body[data-lang="ar"] .visual-subject-card {
 }
 
 .experiment-layout-embedded {
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 22px;
 }
 
 .experiment-layout-embedded .panel-card {
@@ -1203,11 +1232,105 @@ body[data-lang="ar"] .visual-subject-card {
 }
 
 .lab-frame.is-idle {
-  height: 260px;
+  display: none;
+}
+
+.lab-preview {
+  min-height: clamp(340px, 44vw, 520px);
+  margin-top: 14px;
+  border: 1px solid rgba(21, 101, 192, 0.14);
+  border-radius: 22px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr);
+  background:
+    linear-gradient(135deg, rgba(232, 245, 233, 0.95), rgba(227, 242, 253, 0.95) 55%, rgba(243, 229, 245, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
+.lab-preview.is-loading {
+  opacity: 0.55;
+  filter: saturate(0.8);
+}
+
+.lab-preview-scene {
+  position: relative;
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.lab-preview-scene::before {
+  content: "";
+  position: absolute;
+  width: min(72%, 280px);
+  aspect-ratio: 1;
+  border-radius: 50%;
   min-height: 0;
   background:
-    linear-gradient(135deg, rgba(21, 101, 192, 0.07), rgba(0, 105, 92, 0.05)),
-    #f8fbff;
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.95), transparent 32%),
+    rgba(255, 255, 255, 0.36);
+}
+
+.lab-preview-main {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(5.5rem, 13vw, 9rem);
+  filter: drop-shadow(0 18px 20px rgba(16, 59, 115, 0.18));
+  animation: science-float 3s ease-in-out infinite;
+}
+
+.lab-preview-object {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 12px 26px rgba(16, 59, 115, 0.12);
+  font-size: 2.2rem;
+}
+
+.lab-preview-object.object-1 { top: 12%; inset-inline-start: 13%; }
+.lab-preview-object.object-2 { top: 20%; inset-inline-end: 12%; }
+.lab-preview-object.object-3 { bottom: 17%; inset-inline-start: 18%; }
+.lab-preview-object.object-4 { bottom: 12%; inset-inline-end: 17%; }
+
+.lab-preview-copy {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  padding: clamp(22px, 4vw, 42px);
+}
+
+.lab-preview-copy h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+}
+
+.lab-preview-copy p {
+  margin: 0;
+  color: var(--text);
+  max-width: 46ch;
+}
+
+.lab-preview-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.lab-preview-tags span {
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--navy);
+  font-weight: 800;
 }
 
 .embedded-assistant {
@@ -2088,6 +2211,7 @@ body[data-lang="ar"] .visual-level-grid .level-choice {
   .split-layout,
   .teacher-layout,
   .experiment-layout,
+  .experiment-header,
   .result-card {
     grid-template-columns: 1fr;
   }
@@ -2099,6 +2223,7 @@ body[data-lang="ar"] .visual-level-grid .level-choice {
   }
 
   .dashboard-selected-layout,
+  .lab-preview,
   .available-card {
     grid-template-columns: 1fr;
   }
@@ -2150,12 +2275,12 @@ body[data-lang="ar"] .visual-level-grid .level-choice {
   }
 
   .lab-frame {
-    height: 520px;
+    height: 480px;
     min-height: 0;
   }
 
   .lab-frame-large {
-    height: 560px;
+    height: 500px;
     min-height: 0;
   }
 
@@ -2179,6 +2304,23 @@ body[data-lang="ar"] .visual-level-grid .level-choice {
 
   .panel-head-wide {
     flex-direction: column;
+  }
+
+  .experiment-header {
+    text-align: center;
+  }
+
+  .progress-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .lab-preview {
+    min-height: 520px;
+  }
+
+  .lab-preview-scene {
+    min-height: 250px;
   }
 
   .lab-link-summary {
@@ -2213,6 +2355,30 @@ body[data-lang="ar"] .visual-level-grid .level-choice {
   .hero-visual {
     grid-template-columns: repeat(2, minmax(80px, 1fr));
     padding: 10px;
+  }
+
+  .experiment-shell {
+    padding-inline: 12px;
+  }
+
+  .experiment-header {
+    border-radius: 18px;
+    padding: 18px;
+  }
+
+  .experiment-header h1 {
+    font-size: clamp(1.65rem, 10vw, 2.45rem);
+  }
+
+  .lab-preview {
+    min-height: 470px;
+    border-radius: 18px;
+  }
+
+  .lab-preview-object {
+    width: 52px;
+    height: 52px;
+    font-size: 1.8rem;
   }
 
   .coming-soon-divider {

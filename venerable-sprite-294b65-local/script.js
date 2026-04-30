@@ -98,6 +98,49 @@ const SUBJECT_ICONS = {
   "organic-chemistry": "🧪"
 };
 
+const LAB_PREVIEWS = {
+  circuit: {
+    icon: "⚡",
+    objects: ["🔋", "💡", "🔌", "🔘"],
+    title: { fr: "Circuit électrique", ar: "الدائرة الكهربائية", en: "Electrical circuit" },
+    text: {
+      fr: "Prépare la pile, la lampe et les fils avant d'ouvrir le labo 3D.",
+      ar: "حضّر البطارية والمصباح والأسلاك قبل فتح المختبر الثلاثي الأبعاد.",
+      en: "Prepare the battery, lamp, and wires before opening the 3D lab."
+    }
+  },
+  biology: {
+    icon: "🌱",
+    objects: ["💧", "🌿", "🧪", "☀️"],
+    title: { fr: "Plante et eau", ar: "النبات والماء", en: "Plant and water" },
+    text: {
+      fr: "Observe comment l'eau colorée monte dans la tige.",
+      ar: "لاحظ كيف يصعد الماء الملون داخل الساق.",
+      en: "Observe how colored water rises through the stem."
+    }
+  },
+  chemistry: {
+    icon: "⚗️",
+    objects: ["🥽", "🧪", "🫧", "🔥"],
+    title: { fr: "Réaction chimique", ar: "تفاعل كيميائي", en: "Chemical reaction" },
+    text: {
+      fr: "Commence par la sécurité, puis observe la réaction.",
+      ar: "ابدأ بالسلامة ثم لاحظ التفاعل.",
+      en: "Start with safety, then observe the reaction."
+    }
+  },
+  physics: {
+    icon: "⚖️",
+    objects: ["📏", "⚖️", "🧲", "⏱️"],
+    title: { fr: "Physique visuelle", ar: "فيزياء بصرية", en: "Visual physics" },
+    text: {
+      fr: "Manipule, mesure et compare dans le labo 3D.",
+      ar: "جرّب وقِس وقارن داخل المختبر الثلاثي الأبعاد.",
+      en: "Manipulate, measure, and compare in the 3D lab."
+    }
+  }
+};
+
 const LEVEL_EXPERIENCES = {
   primaire: [
     {
@@ -768,10 +811,36 @@ function initializeExperimentRuntime(experimentId) {
 function loadEmbeddedLab(frame, labMode, section = "") {
   if (!frame) return;
   const nextSrc = buildLabViewUrl(labMode, currentLanguage(), section);
+  const preview = frame.previousElementSibling?.classList?.contains("lab-preview") ? frame.previousElementSibling : null;
+  if (preview) preview.classList.add("is-loading");
   frame.dataset.labLoaded = "true";
   frame.dataset.labSrc = nextSrc;
   frame.classList.remove("is-idle");
   if (frame.getAttribute("src") !== nextSrc) frame.setAttribute("src", nextSrc);
+}
+
+function createLabPreview(frame, labMode) {
+  if (!frame || frame.previousElementSibling?.classList?.contains("lab-preview")) return;
+  const preview = LAB_PREVIEWS[labMode] || LAB_PREVIEWS.physics;
+  const node = document.createElement("div");
+  node.className = `lab-preview lab-preview-${labMode}`;
+  node.innerHTML = `
+    <div class="lab-preview-scene" aria-hidden="true">
+      <span class="lab-preview-main">${escapeHtml(preview.icon)}</span>
+      ${preview.objects.map((item, index) => `<span class="lab-preview-object object-${index + 1}">${escapeHtml(item)}</span>`).join("")}
+    </div>
+    <div class="lab-preview-copy">
+      <span class="eyebrow">${dualText("Aperçu du labo", "لمحة عن المختبر", "Lab preview")}</span>
+      <h3>${escapeHtml(getText(preview.title))}</h3>
+      <p>${escapeHtml(getText(preview.text))}</p>
+      <div class="lab-preview-tags">
+        <span>3D</span>
+        <span>${dualText("Interactif", "تفاعلي", "Interactive")}</span>
+        <span>${dualText("Prêt à ouvrir", "جاهز للفتح", "Ready to open")}</span>
+      </div>
+    </div>
+  `;
+  frame.insertAdjacentElement("beforebegin", node);
 }
 
 function computeExperimentScore() {
@@ -1171,7 +1240,11 @@ function initEmbeddedLabExperiment() {
   if (frame) {
     frame.dataset.labSrc = buildLabViewUrl(labMode, currentLanguage(), labSection);
     frame.classList.add("is-idle");
+    createLabPreview(frame, labMode);
     frame.addEventListener("load", () => {
+      if (frame.dataset.labLoaded !== "true") return;
+      const preview = frame.previousElementSibling?.classList?.contains("lab-preview") ? frame.previousElementSibling : null;
+      if (preview) preview.remove();
       markStep(1, true);
       setStatus(getText({
         fr: `${lab.name.fr} est charge. Vous pouvez commencer la manipulation.`,
