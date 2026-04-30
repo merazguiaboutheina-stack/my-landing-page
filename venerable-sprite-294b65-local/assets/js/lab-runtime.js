@@ -5,7 +5,7 @@
     import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
     import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
     import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.2/+esm';
-    import { LAB_MODES as BASE_LAB_MODES, LAB_QUERY_ALIASES as BASE_LAB_QUERY_ALIASES, TRANSLATIONS as BASE_TRANSLATIONS } from './lab-data.js';
+    import { LAB_MODES as BASE_LAB_MODES, LAB_QUERY_ALIASES as BASE_LAB_QUERY_ALIASES, TRANSLATIONS as BASE_TRANSLATIONS } from './lab-data.js?v=20260430-embedded-fix';
 
     const ui = {
       freefallResult: document.getElementById('freefall-result'),
@@ -151,6 +151,7 @@
     const requestedLabMode = normalizeLabMode(queryParams.get('lab'));
     const isSingleLabView = ['1', 'true', 'yes'].includes((queryParams.get('single') || '').toLowerCase());
     const requestedSection = String(queryParams.get('section') || '').toLowerCase();
+    const MAX_RENDER_PIXEL_RATIO = isSingleLabView ? 1.25 : 1.75;
 
     let immersiveDragObjectId = '';
 
@@ -255,7 +256,7 @@
     circuitCamera.position.set(0, 7.2, 8.4);
 
     const circuitRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    circuitRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    circuitRenderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_RENDER_PIXEL_RATIO));
     circuitRenderer.shadowMap.enabled = true;
     circuitRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
     circuitRenderer.outputEncoding = THREE.sRGBEncoding;
@@ -326,7 +327,7 @@
       viewportRect: null
     };
 
-    let activeLabMode = 'physics';
+    let activeLabMode = requestedLabMode;
 
     const BENCH_TOP_Y = 1.25;
     const BENCH_LENGTH = 16.8;
@@ -355,7 +356,7 @@
     scene.fog = new THREE.Fog(0xb8d6e8, 20, 40);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_RENDER_PIXEL_RATIO));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -528,7 +529,7 @@
 
     function createImmersiveRenderer(viewport) {
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO));
       renderer.physicallyCorrectLights = true;
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -936,7 +937,7 @@
       if (!biologyLab) return;
       const rect = biologyUi.viewport.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
-      biologyLab.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      biologyLab.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO));
       biologyLab.renderer.setSize(rect.width, rect.height, false);
       biologyLab.camera.aspect = rect.width / rect.height;
       biologyLab.camera.updateProjectionMatrix();
@@ -1587,7 +1588,7 @@
       if (!chemistryLab) return;
       const rect = chemistryUi.viewport.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
-      chemistryLab.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      chemistryLab.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO));
       chemistryLab.renderer.setSize(rect.width, rect.height, false);
       chemistryLab.camera.aspect = rect.width / rect.height;
       chemistryLab.camera.updateProjectionMatrix();
@@ -3539,7 +3540,7 @@
       const rect = circuitUi.viewport.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       circuitState.viewportRect = rect;
-      circuitRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      circuitRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_RENDER_PIXEL_RATIO));
       circuitRenderer.setSize(rect.width, rect.height, false);
       circuitCamera.aspect = rect.width / rect.height;
       circuitCamera.updateProjectionMatrix();
@@ -5327,6 +5328,7 @@
 
     function animate(time = 0) {
       requestAnimationFrame(animate);
+      if (document.hidden) return;
       const delta = Math.min(clock.getDelta(), 0.05);
       if (activeLabMode === 'physics' && physicsInitialized) {
         world.step(1 / 60, delta, 3);
@@ -5356,7 +5358,7 @@
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_RENDER_PIXEL_RATIO));
       resizeCircuitCanvas();
       resizeBiologyViewport();
       resizeChemistryViewport();

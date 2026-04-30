@@ -3,19 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>??????? ?????? ??????????</title>
+  <title>VirtuLab - Laboratoire</title>
   <link rel="icon" href="./favicon.svg" />
   <link rel="stylesheet" href="./assets/css/lab-runtime.css" />
 </head>
-<body class="mode-physics lang-ar">
+<body>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const aliases = {
+        physics: 'physics',
+        circuit: 'circuit',
+        electric: 'circuit',
+        biology: 'biology',
+        bio: 'biology',
+        plant: 'biology',
+        science: 'biology',
+        cem: 'biology',
+        chemistry: 'chemistry',
+        chem: 'chemistry',
+        chimie: 'chemistry',
+        lycee: 'chemistry'
+      };
+      const lab = aliases[String(params.get('lab') || 'physics').toLowerCase()] || 'physics';
+      const lang = ['ar', 'fr'].includes(params.get('lang')) ? params.get('lang') : 'fr';
+      const single = ['1', 'true', 'yes'].includes(String(params.get('single') || '').toLowerCase());
+
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+      document.body.className = `mode-${lab} lang-${lang}${single ? ' single-lab' : ''}`;
+    })();
+  </script>
   <div id="lab-switcher">
-    <button class="lab-mode-btn active" data-lab="physics" data-i18n="lab.physics" type="button">?????? ?????? ???????</button>
-    <button class="lab-mode-btn" data-lab="circuit" data-i18n="lab.circuit" type="button">????? ???????</button>
-    <button class="lab-mode-btn" data-lab="biology" data-i18n="lab.biology" type="button">???? CEM</button>
-    <button class="lab-mode-btn" data-lab="chemistry" data-i18n="lab.chemistry" type="button">?????? ?????</button>
+    <button class="lab-mode-btn active" data-lab="physics" data-i18n="lab.physics" type="button">Physique 3D</button>
+    <button class="lab-mode-btn" data-lab="circuit" data-i18n="lab.circuit" type="button">Circuit électrique</button>
+    <button class="lab-mode-btn" data-lab="biology" data-i18n="lab.biology" type="button">Sciences</button>
+    <button class="lab-mode-btn" data-lab="chemistry" data-i18n="lab.chemistry" type="button">Chimie</button>
     <div class="switch-divider" aria-hidden="true"></div>
-    <button class="lang-switch-btn active" data-lang="ar" type="button">???????</button>
-    <button class="lang-switch-btn" data-lang="fr" type="button">Franï¿½ais</button>
+    <button class="lang-switch-btn active" data-lang="ar" type="button">العربية</button>
+    <button class="lang-switch-btn" data-lang="fr" type="button">Français</button>
   </div>
 
   <div id="ui-panel">
@@ -525,7 +551,7 @@
     }
   </script>
 
-  <script type="module" src="./assets/js/lab-runtime.js"></script>
+  <script type="module" src="./assets/js/lab-runtime.js?v=20260430-embedded-fix"></script>
 </body>
 </html>
 

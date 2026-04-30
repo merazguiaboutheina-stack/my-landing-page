@@ -2096,4 +2096,64 @@
         display: none;
       }
     }
+
+    /* Embedded lab pages are shown inside the experiment cards, so remove
+       the extra standalone navigation chrome and give the canvas the space. */
+    body.single-lab #lab-switcher {
+      display: none !important;
+    }
+
+    body.single-lab #ui-panel,
+    body.single-lab #circuit-sidebar {
+      top: 14px !important;
+      right: 14px !important;
+      bottom: 14px !important;
+      width: min(310px, calc(100vw - 28px)) !important;
+      max-height: calc(100vh - 28px) !important;
+      overflow: auto !important;
+    }
+
+    body.single-lab #circuit-toolbar {
+      top: 14px !important;
+      left: 14px !important;
+      right: 340px !important;
+    }
+
+    body.single-lab .immersive-main {
+      padding: 14px !important;
+    }
+
+    body.single-lab.mode-circuit #physics-canvas,
+    body.single-lab.mode-biology #physics-canvas,
+    body.single-lab.mode-chemistry #physics-canvas {
+      display: none !important;
+    }
+
+    body.single-lab.mode-circuit .circuit-stage-card,
+    body.single-lab.mode-circuit #circuit-hint-ribbon,
+    body.single-lab.mode-circuit .circuit-board-guide,
+    body.single-lab.mode-circuit .circuit-note,
+    body.single-lab.mode-circuit .circuit-readouts {
+      display: none !important;
+    }
+
+    body.single-lab.mode-circuit #circuit-board-wrap {
+      inset: 0;
+    }
+
+    @media (max-width: 920px) {
+      body.single-lab #circuit-toolbar {
+        left: 10px !important;
+        right: 10px !important;
+      }
+
+      body.single-lab #circuit-sidebar {
+        top: auto !important;
+        left: 10px !important;
+        right: 10px !important;
+        bottom: 10px !important;
+        width: auto !important;
+        max-height: 34vh !important;
+      }
+    }
   
