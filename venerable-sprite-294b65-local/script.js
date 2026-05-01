@@ -2776,6 +2776,19 @@ function renderLevelExperiencePage(level, list) {
   }
 
   grid.innerHTML = available.map((item) => renderExperienceCard(item, level, true)).join("");
+  
+  grid.innerHTML += `
+    <article class="experiment-card level-experience-card coming-soon-card" aria-disabled="true">
+      <div class="experience-meta">
+        <span class="experience-category">${escapeHtml(getText({ fr: "Plus d'expériences", ar: "تجارب أخرى", en: "More experiments" }))}</span>
+        <span class="experience-status"><span class="status-dot"></span>${escapeHtml(getText({ fr: "Bientôt disponible", ar: "قريباً", en: "Coming soon" }))}</span>
+      </div>
+      <div class="experience-art">⏳</div>
+      <h2>${escapeHtml(getText({ fr: "Autres expériences", ar: "تجارب قادمة", en: "Other experiments" }))}</h2>
+      <p>${escapeHtml(getText({ fr: "De nouvelles expériences arrivent bientôt pour cette matière.", ar: "تجارب جديدة قادمة قريباً لهذه المادة.", en: "New experiments are coming soon for this subject." }))}</p>
+    </article>
+  `;
+
   grid.querySelectorAll("[data-start-lab]").forEach((button) => {
     button.addEventListener("click", () => {
       const lab = button.dataset.startLab;
@@ -3049,7 +3062,15 @@ function renderSubjects(level) {
     `;
   }).join("");
 
-  subjectGrid.querySelectorAll(".subject-card").forEach((button) => {
+  subjectGrid.innerHTML += `
+    <button type="button" class="selection-card subject-card visual-subject-card coming-soon-card" style="--level-accent:#94a3b8; opacity: 0.6; cursor: default;">
+      <span class="subject-photo" aria-hidden="true" style="font-size: 2rem;">⏳</span>
+      <strong style="margin-top: 10px;">${dualText("Autres matières", "مواد أخرى", "Other subjects")}</strong>
+      <span class="subject-hint" style="color: #666; font-weight: 500;">${dualText("Bientôt disponible", "قريباً", "Coming soon")}</span>
+    </button>
+  `;
+
+  subjectGrid.querySelectorAll(".subject-card[data-subject]").forEach((button) => {
     button.addEventListener("click", () => {
       const selectedSubject = subjects.find((subject) => subject.id === button.dataset.subject);
       localStorage.setItem(STORAGE.currentLevel, level);
