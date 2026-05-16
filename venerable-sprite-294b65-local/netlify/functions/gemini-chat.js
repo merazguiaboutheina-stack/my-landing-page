@@ -6,6 +6,34 @@
 const GEMINI_ENDPOINT =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
+function repairMojibakeText(value) {
+  let text = String(value ?? '');
+  if (!/[ÃÂØÙ]/.test(text)) return text;
+  for (let pass = 0; pass < 2; pass += 1) {
+    try {
+      const encoded = Array.from(text).map(char => {
+        const code = char.charCodeAt(0);
+        return code <= 255 ? `%${code.toString(16).padStart(2, '0')}` : char;
+      }).join('');
+      const decoded = decodeURIComponent(encoded);
+      if (decoded === text || /%[0-9a-f]{2}/i.test(decoded)) break;
+      text = decoded;
+    } catch {
+      break;
+    }
+  }
+  return text;
+}
+
+function repairPayload(value) {
+  if (typeof value === 'string') return repairMojibakeText(value);
+  if (Array.isArray(value)) return value.map(repairPayload);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, repairPayload(item)]));
+  }
+  return value;
+}
+
 function buildSystemPrompt(ctx) {
   const {
     lang = 'fr',
@@ -87,7 +115,7 @@ function json(statusCode, body) {
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(repairPayload(body))
   };
 }
 
@@ -165,7 +193,7 @@ exports.handler = async function handler(event) {
   try {
     const response = await fetch(`${GEMINI_ENDPOINT}?key=${process.env.GEMINI_API_KEY}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents,
@@ -191,7 +219,7 @@ exports.handler = async function handler(event) {
     const reply = extractText(data);
     if (!reply) return json(502, { error: 'Gemini returned an empty response.' });
 
-    return json(200, { reply });
+    return json(200, { reply: repairMojibakeText(reply) });
   } catch (error) {
     return json(500, { error: error instanceof Error ? error.message : 'Unexpected server error.' });
   }

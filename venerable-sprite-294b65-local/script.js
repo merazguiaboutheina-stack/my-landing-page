@@ -383,7 +383,26 @@ function currentLanguage() {
 
 function getText(pair) {
   if (!pair || typeof pair !== "object") return "";
-  return pair[currentLanguage()] || pair.fr || pair.en || pair.ar || "";
+  return repairMojibakeText(pair[currentLanguage()] || pair.fr || pair.en || pair.ar || "");
+}
+
+function repairMojibakeText(value) {
+  let text = String(value ?? "");
+  if (!/[ÃÂØÙ]/.test(text)) return text;
+  for (let pass = 0; pass < 2; pass += 1) {
+    try {
+      const encoded = Array.from(text).map((char) => {
+        const code = char.charCodeAt(0);
+        return code <= 255 ? `%${code.toString(16).padStart(2, "0")}` : char;
+      }).join("");
+      const decoded = decodeURIComponent(encoded);
+      if (decoded === text || /%[0-9a-f]{2}/i.test(decoded)) break;
+      text = decoded;
+    } catch (error) {
+      break;
+    }
+  }
+  return text;
 }
 
 function escapeHtml(value) {
@@ -391,12 +410,41 @@ function escapeHtml(value) {
 }
 
 function dualText(fr, ar, en = fr) {
+  fr = repairMojibakeText(fr);
+  ar = repairMojibakeText(ar);
+  en = repairMojibakeText(en);
   return `<span class="lang-fr">${escapeHtml(fr)}</span><span class="lang-ar">${escapeHtml(ar)}</span><span class="lang-en">${escapeHtml(en)}</span>`;
 }
 
 function localizedTextMarkup(value, extraClass = "") {
   const className = extraClass ? ` ${extraClass}` : "";
-  return `<span class="lang-fr${className}" dir="ltr" lang="fr">${escapeHtml(value.fr || "")}</span><span class="lang-ar${className}" dir="rtl" lang="ar">${escapeHtml(value.ar || "")}</span><span class="lang-en${className}" dir="ltr" lang="en">${escapeHtml(value.en || value.fr || "")}</span>`;
+  return `<span class="lang-fr${className}" dir="ltr" lang="fr">${escapeHtml(repairMojibakeText(value.fr || ""))}</span><span class="lang-ar${className}" dir="rtl" lang="ar">${escapeHtml(repairMojibakeText(value.ar || ""))}</span><span class="lang-en${className}" dir="ltr" lang="en">${escapeHtml(repairMojibakeText(value.en || value.fr || ""))}</span>`;
+}
+
+function repairDocumentMojibake(root = document.body) {
+  if (!root) return;
+  const skipTags = new Set(["SCRIPT", "STYLE", "TEXTAREA", "CODE", "PRE"]);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement;
+      if (!parent || skipTags.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
+      return /[ÃÂØÙ]/.test(node.nodeValue || "") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+    }
+  });
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+  textNodes.forEach((node) => {
+    node.nodeValue = repairMojibakeText(node.nodeValue || "");
+  });
+  root.querySelectorAll("[title], [aria-label], [placeholder], [data-placeholder-fr], [data-placeholder-ar], [data-placeholder-en]").forEach((node) => {
+    ["title", "aria-label", "placeholder", "data-placeholder-fr", "data-placeholder-ar", "data-placeholder-en"].forEach((attribute) => {
+      if (!node.hasAttribute(attribute)) return;
+      const value = node.getAttribute(attribute);
+      const repaired = repairMojibakeText(value);
+      if (value !== repaired) node.setAttribute(attribute, repaired);
+    });
+  });
+  if (document.title) document.title = repairMojibakeText(document.title);
 }
 
 function normalizeLevelKey(level) {
@@ -418,6 +466,13 @@ function scoreToBadge(score) {
   if (score >= 75) return { fr: "Tres bien", ar: "جيد جدا" };
   if (score >= 60) return { fr: "Bien", ar: "جيد" };
   return { fr: "A renforcer", ar: "يحتاج دعما" };
+}
+
+function scoreToBadge(score) {
+  if (score >= 90) return { fr: "Excellent", ar: "ممتاز", en: "Excellent" };
+  if (score >= 75) return { fr: "Tres bien", ar: "جيد جدا", en: "Very good" };
+  if (score >= 60) return { fr: "Bien", ar: "جيد", en: "Good" };
+  return { fr: "A renforcer", ar: "يحتاج دعما", en: "Needs practice" };
 }
 
 function clearSession() {
@@ -443,6 +498,7 @@ function updateStudentBadge() {
 
 function applyLanguage(lang) {
   lang = ["fr", "ar", "en"].includes(lang) ? lang : "fr";
+  repairDocumentMojibake();
   document.body.dataset.lang = lang;
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
@@ -477,6 +533,8 @@ function applyLanguage(lang) {
   }
   updateStudentBadge();
   if (document.body.dataset.page === "experiences") initLevelExperiences();
+  if (document.body.dataset.page === "quiz") rerenderActiveQuizLanguage();
+  repairDocumentMojibake();
 }
 
 function bindGlobalUi() {
@@ -536,24 +594,20 @@ function writeLabCodes(codes) {
 }
 
 function defaultProfessors() {
-  return [
-    {
-      name: "Professeur demo",
-      username: "prof",
-      password: "1234",
-      subject: "Sciences",
-      classCode: "CEM2026",
-      createdAt: "2026-01-01T00:00:00.000Z"
-    }
-  ];
+  return [];
+}
+
+function isDefaultProfessorAccount(professor) {
+  return String(professor?.username || "").trim() === "prof"
+    && String(professor?.password || "") === "1234";
 }
 
 function readProfessors() {
-  const professors = readJson(STORAGE.professors, null);
-  if (Array.isArray(professors) && professors.length) return professors;
-  const seeded = defaultProfessors();
-  writeJson(STORAGE.professors, seeded);
-  return seeded;
+  const professors = readJson(STORAGE.professors, []);
+  if (!Array.isArray(professors)) return [];
+  const cleaned = professors.filter((professor) => !isDefaultProfessorAccount(professor));
+  if (cleaned.length !== professors.length) writeJson(STORAGE.professors, cleaned);
+  return cleaned;
 }
 
 function writeProfessors(professors) {
@@ -566,6 +620,110 @@ function readResultHistory() {
 
 function writeResultHistory(history) {
   writeJson(STORAGE.resultHistory, history);
+}
+
+function studentResultKey(name, classCode, experimentId = "") {
+  return [
+    String(name || "").trim().toLowerCase(),
+    normalizeLabCode(classCode || "DIRECT") || "DIRECT",
+    String(experimentId || "")
+  ].join("|");
+}
+
+function currentStudentClassCode() {
+  const activeAssignment = findLabCodeAssignment(localStorage.getItem(STORAGE.activeLabCode));
+  if (activeAssignment) return activeAssignment.code;
+  return normalizeLabCode(localStorage.getItem(STORAGE.studentClass) || "DIRECT") || "DIRECT";
+}
+
+function upsertCurrentStudentAccount(extra = {}) {
+  const name = String(localStorage.getItem(STORAGE.studentName) || "").trim();
+  if (!name) return null;
+  const classCode = currentStudentClassCode();
+  const level = normalizeLevelKey(localStorage.getItem(STORAGE.currentLevel) || extra.level || "cem");
+  const activeCode = findLabCodeAssignment(classCode) ? classCode : (localStorage.getItem(STORAGE.activeLabCode) || "");
+  const students = readJson(STORAGE.students, []);
+  const normalizedName = name.toLowerCase();
+  const normalizedCode = normalizeLabCode(classCode || "DIRECT") || "DIRECT";
+  let studentIndex = students.findIndex((student) => {
+    return String(student.name || "").trim().toLowerCase() === normalizedName
+      && (normalizeLabCode(student.classCode || "DIRECT") || "DIRECT") === normalizedCode;
+  });
+  if (studentIndex === -1) {
+    studentIndex = students.findIndex((student) => String(student.name || "").trim().toLowerCase() === normalizedName);
+  }
+  const existing = studentIndex >= 0 ? students[studentIndex] : {};
+  const nextStudent = {
+    ...existing,
+    ...extra,
+    name,
+    classCode,
+    level,
+    activeCode,
+    lastLoginAt: new Date().toISOString()
+  };
+  if (!nextStudent.createdAt) nextStudent.createdAt = new Date().toISOString();
+  if (studentIndex >= 0) students[studentIndex] = nextStudent;
+  else students.unshift(nextStudent);
+  writeJson(STORAGE.students, students);
+  localStorage.setItem(STORAGE.studentClass, classCode);
+  localStorage.setItem(STORAGE.currentLevel, level);
+  if (activeCode) localStorage.setItem(STORAGE.activeLabCode, activeCode);
+  return nextStudent;
+}
+
+function bestTrackedClassCode(student = {}, fallbackCode = "DIRECT") {
+  const activeAssignment = findLabCodeAssignment(student.activeCode);
+  if (activeAssignment) return activeAssignment.code;
+  const classAssignment = findLabCodeAssignment(student.classCode);
+  if (classAssignment) return classAssignment.code;
+  const fallbackAssignment = findLabCodeAssignment(fallbackCode);
+  if (fallbackAssignment) return fallbackAssignment.code;
+  return normalizeLabCode(student.classCode || fallbackCode || "DIRECT") || "DIRECT";
+}
+
+function syncStudentTrackingStore() {
+  const students = readJson(STORAGE.students, []);
+  const history = readResultHistory();
+  let studentsChanged = false;
+  let historyChanged = false;
+  const studentsByName = new Map(students.map((student, index) => [String(student.name || "").trim().toLowerCase(), { student, index }]));
+
+  history.forEach((item) => {
+    const name = String(item.studentName || "").trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    const match = studentsByName.get(key);
+    if (match) {
+      const trackedCode = bestTrackedClassCode(match.student, item.classCode);
+      const trackedLevel = normalizeLevelKey(match.student.level || item.level || "cem");
+      if ((normalizeLabCode(item.classCode || "DIRECT") || "DIRECT") !== (normalizeLabCode(trackedCode) || "DIRECT")) {
+        item.classCode = trackedCode;
+        historyChanged = true;
+      }
+      if (normalizeLevelKey(item.level || "cem") !== trackedLevel) {
+        item.level = trackedLevel;
+        historyChanged = true;
+      }
+      return;
+    }
+    const classCode = canonicalClassCode(item.classCode || "DIRECT");
+    const newStudent = {
+      name,
+      password: "",
+      classCode,
+      level: normalizeLevelKey(item.level || "cem"),
+      activeCode: findLabCodeAssignment(classCode) ? classCode : "",
+      createdAt: item.completedAt || new Date().toISOString(),
+      lastLoginAt: item.completedAt || new Date().toISOString()
+    };
+    students.unshift(newStudent);
+    studentsByName.set(key, { student: newStudent, index: 0 });
+    studentsChanged = true;
+  });
+
+  if (studentsChanged) writeJson(STORAGE.students, students);
+  if (historyChanged) writeResultHistory(history);
 }
 
 function findLabCodeAssignment(code) {
@@ -772,7 +930,7 @@ function createAssistantWidget() {
       <div class="assistant-popover" id="assistant-popover">
         <div class="assistant-header">
           <div>
-            <h2>Assistant EduVirtuel</h2>
+            <h2>Assistant VirtuLab - تجربتي</h2>
             <p>${dualText("Aide rapide pour la navigation et les experiences.", "مساعدة سريعة للتنقل والتجارب.")}</p>
           </div>
         </div>
@@ -785,7 +943,7 @@ function createAssistantWidget() {
       </div>
       <button class="assistant-launcher" id="assistant-launcher" type="button">
         <span>💬</span>
-        <span>${dualText("Assistant EduVirtuel", "مساعد EduVirtuel")}</span>
+        <span>${dualText("Assistant VirtuLab - تجربتي", "مساعد VirtuLab - تجربتي")}</span>
       </button>
     </div>
   `;
@@ -1909,6 +2067,8 @@ EXPERIMENTS.chimie.quiz = [
 ];
 
 function renderQuizQuestion(state) {
+  activeQuizState = state;
+  updateQuizTitle(state);
   const stage = document.getElementById("quiz-stage");
   const progress = document.querySelector("[data-quiz-progress]");
   const config = getExperimentConfig(state.experimentId);
@@ -1944,6 +2104,7 @@ function renderQuizQuestion(state) {
       nextButton.innerHTML = state.index === state.questions.length - 1 ? dualText("Voir le resultat final", "عرض النتيجة النهائية") : dualText("Question suivante", "السؤال التالي");
       nextButton.addEventListener("click", () => {
         state.index += 1;
+        state.currentAnswer = null;
         if (state.index >= state.questions.length) renderQuizResult(state, config);
         else renderQuizQuestion(state);
       });
@@ -1985,64 +2146,73 @@ function renderQuizResult(state, config) {
   `;
 }
 
-function renderQuizResult(state, config) {
+function renderQuizResult(state, config, options = {}) {
+  activeQuizState = state;
+  state.finished = true;
+  updateQuizTitle(state);
   const stage = document.getElementById("quiz-stage");
   const progress = document.querySelector("[data-quiz-progress]");
   if (!stage || !progress) return;
   const finalScore = Math.round((state.score / Math.max(state.questions.length, 1)) * 100);
   const badge = scoreToBadge(finalScore);
-  const quizScores = readJson(STORAGE.quizScores, {});
-  quizScores[state.experimentId] = finalScore;
-  writeJson(STORAGE.quizScores, quizScores);
-
   const labResult = readJson(STORAGE.lastResult, null) || {};
-  const completedAt = new Date().toISOString();
-  const nextResult = {
-    ...labResult,
-    experimentId: state.experimentId,
-    title: config.title,
-    quizScore: finalScore,
-    quizCorrect: state.score,
-    quizTotal: state.questions.length,
-    completedAt
-  };
-  writeJson(STORAGE.lastResult, nextResult);
+  if (!options.skipPersist && !state.persisted) {
+    const quizScores = readJson(STORAGE.quizScores, {});
+    quizScores[state.experimentId] = finalScore;
+    writeJson(STORAGE.quizScores, quizScores);
 
-  const history = readResultHistory();
-  history.unshift({
-    id: `${completedAt}-${state.experimentId}`,
-    studentName: localStorage.getItem(STORAGE.studentName) || "",
-    classCode: localStorage.getItem(STORAGE.studentClass) || "DIRECT",
-    level: normalizeLevelKey(localStorage.getItem(STORAGE.currentLevel) || "cem"),
-    experimentId: state.experimentId,
-    title: config.title,
-    labScore: Number(labResult.score || 0),
-    quizScore: finalScore,
-    quizCorrect: state.score,
-    quizTotal: state.questions.length,
-    completedAt
-  });
-  writeResultHistory(history.slice(0, 80));
+    const completedAt = new Date().toISOString();
+    const nextResult = {
+      ...labResult,
+      experimentId: state.experimentId,
+      title: config.title,
+      studentName: linkedStudent?.name || localStorage.getItem(STORAGE.studentName) || "",
+      classCode: linkedStudent?.classCode || currentStudentClassCode(),
+      level: normalizeLevelKey(linkedStudent?.level || localStorage.getItem(STORAGE.currentLevel) || "cem"),
+      quizScore: finalScore,
+      quizCorrect: state.score,
+      quizTotal: state.questions.length,
+      completedAt
+    };
+    writeJson(STORAGE.lastResult, nextResult);
 
-  progress.textContent = getText({ fr: "Quiz termine", ar: "Quiz termine", en: "Quiz completed" });
+    const history = readResultHistory();
+    history.unshift({
+      id: `${completedAt}-${state.experimentId}`,
+      studentName: localStorage.getItem(STORAGE.studentName) || "",
+      classCode: localStorage.getItem(STORAGE.studentClass) || "DIRECT",
+      level: normalizeLevelKey(localStorage.getItem(STORAGE.currentLevel) || "cem"),
+      experimentId: state.experimentId,
+      title: config.title,
+      labScore: Number(labResult.score || 0),
+      quizScore: finalScore,
+      quizCorrect: state.score,
+      quizTotal: state.questions.length,
+      completedAt
+    });
+    writeResultHistory(history.slice(0, 80));
+    state.persisted = true;
+  }
+
+  progress.textContent = getText({ fr: "Quiz terminÃ©", ar: "Ø§ÙƒØªÙ…Ù„ Ø§Ù„Ø§Ø®ØªØ¨Ø§Ø±", en: "Quiz completed" });
   stage.innerHTML = `
     <div class="quiz-result">
       <h2>${escapeHtml(getText(config.title))}</h2>
       <p>${escapeHtml(getText({
         fr: `Score final : ${finalScore}/100 (${state.score}/${state.questions.length} reponses justes)`,
-        ar: `Score final : ${finalScore}/100 (${state.score}/${state.questions.length})`,
+        ar: `Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠØ©: ${finalScore}/100 (${state.score}/${state.questions.length} Ø¥Ø¬Ø§Ø¨Ø§Øª ØµØ­ÙŠØ­Ø©)`,
         en: `Final score: ${finalScore}/100 (${state.score}/${state.questions.length} correct answers)`
       }))}</p>
       <p class="result-badge">${escapeHtml(getText(badge))}</p>
       <div class="quiz-review-card">
-        <h3>${escapeHtml(getText({ fr: "Revision", ar: "Revision", en: "Review" }))}</h3>
+        <h3>${escapeHtml(getText({ fr: "RÃ©vision", ar: "Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©", en: "Review" }))}</h3>
         ${state.answers.map((answer, index) => `
           <div class="quiz-feedback">
-            <strong>${escapeHtml(getText({ fr: `Question ${index + 1}`, ar: `Question ${index + 1}`, en: `Question ${index + 1}` }))}</strong>
+            <strong>${escapeHtml(getText({ fr: `Question ${index + 1}`, ar: `Ø§Ù„Ø³Ø¤Ø§Ù„ ${index + 1}`, en: `Question ${index + 1}` }))}</strong>
             <p>${escapeHtml(getText(answer.question.prompt))}</p>
             <p>${escapeHtml(getText({
               fr: `Bonne reponse : ${getText(answer.question.options[answer.question.correct])}`,
-              ar: `Bonne reponse : ${getText(answer.question.options[answer.question.correct])}`,
+              ar: `Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø© Ø§Ù„ØµØ­ÙŠØ­Ø©: ${getText(answer.question.options[answer.question.correct])}`,
               en: `Correct answer: ${getText(answer.question.options[answer.question.correct])}`
             }))}</p>
             <p>${escapeHtml(getText(answer.question.explanation))}</p>
@@ -2050,8 +2220,8 @@ function renderQuizResult(state, config) {
         `).join("")}
       </div>
       <div class="hero-actions">
-        <a class="primary-btn" href="result.html">${escapeHtml(getText({ fr: "Voir le resultat complet", ar: "Voir le resultat complet", en: "View full result" }))}</a>
-        <a class="secondary-btn" href="dashboard.html">${escapeHtml(getText({ fr: "Retour au tableau de bord", ar: "Retour au tableau de bord", en: "Back to dashboard" }))}</a>
+        <a class="primary-btn" href="result.html">${escapeHtml(getText({ fr: "Voir le rÃ©sultat complet", ar: "Ø¹Ø±Ø¶ Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„ÙƒØ§Ù…Ù„Ø©", en: "View full result" }))}</a>
+        <a class="secondary-btn" href="dashboard.html">${escapeHtml(getText({ fr: "Retour au tableau de bord", ar: "Ø§Ù„Ø¹ÙˆØ¯Ø© Ø¥Ù„Ù‰ Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…", en: "Back to dashboard" }))}</a>
       </div>
     </div>
   `;
@@ -2102,10 +2272,14 @@ const EDUVIRTUEL_QUIZ_BANK = {
 
 function quizQuestion(frPrompt, arPrompt, enPrompt, frOptions, arOptions, enOptions, correct, frExplanation, arExplanation, enExplanation) {
   return {
-    prompt: { fr: frPrompt, ar: arPrompt, en: enPrompt },
-    options: frOptions.map((fr, index) => ({ fr, ar: arOptions[index], en: enOptions[index] })),
+    prompt: { fr: repairMojibakeText(frPrompt), ar: repairMojibakeText(arPrompt), en: repairMojibakeText(enPrompt) },
+    options: frOptions.map((fr, index) => ({
+      fr: repairMojibakeText(fr),
+      ar: repairMojibakeText(arOptions[index]),
+      en: repairMojibakeText(enOptions[index])
+    })),
     correct,
-    explanation: { fr: frExplanation, ar: arExplanation, en: enExplanation }
+    explanation: { fr: repairMojibakeText(frExplanation), ar: repairMojibakeText(arExplanation), en: repairMojibakeText(enExplanation) }
   };
 }
 
@@ -2113,7 +2287,64 @@ Object.entries(EDUVIRTUEL_QUIZ_BANK).forEach(([experimentId, quiz]) => {
   if (EXPERIMENTS[experimentId]) EXPERIMENTS[experimentId].quiz = quiz;
 });
 
+Object.assign(EXPERIMENTS.circuit.title, { en: "Simple electrical circuit" });
+Object.assign(EXPERIMENTS.plante.title, { en: "Water absorption by plants" });
+Object.assign(EXPERIMENTS.masse.title, { en: "Mass measurement" });
+Object.assign(EXPERIMENTS.chimie.title, { en: "Chemical reaction: hydrogen production" });
+
+let activeQuizState = null;
+
+function quizTitleText(config) {
+  return {
+    fr: `Quiz liÃ© Ã  l'expÃ©rience : ${getText(config.title)}.`,
+    ar: `Ø§Ø®ØªØ¨Ø§Ø± Ù…Ø±ØªØ¨Ø· Ø¨Ø§Ù„ØªØ¬Ø±Ø¨Ø©: ${getText(config.title)}.`,
+    en: `Quiz linked to the experiment: ${getText(config.title)}.`
+  };
+}
+
+function updateQuizTitle(state) {
+  const title = document.querySelector("[data-quiz-title]");
+  if (!title || !state) return;
+  title.textContent = getText(quizTitleText(getExperimentConfig(state.experimentId)));
+}
+
+function renderAnsweredQuizFeedback(state, question) {
+  const feedback = document.getElementById("quiz-feedback");
+  if (!feedback || !state.currentAnswer) return;
+  const correct = state.currentAnswer.correct;
+  feedback.innerHTML = `<strong>${escapeHtml(getText(correct
+    ? { fr: "Bonne rÃ©ponse.", ar: "Ø¥Ø¬Ø§Ø¨Ø© ØµØ­ÙŠØ­Ø©.", en: "Correct answer." }
+    : { fr: "RÃ©ponse Ã  revoir.", ar: "Ø¥Ø¬Ø§Ø¨Ø© ØªØ­ØªØ§Ø¬ Ø¥Ù„Ù‰ Ù…Ø±Ø§Ø¬Ø¹Ø©.", en: "Answer to review." }
+  ))}</strong><p>${escapeHtml(getText(question.explanation))}</p>`;
+  const nextButton = document.createElement("button");
+  nextButton.type = "button";
+  nextButton.className = "primary-btn";
+  nextButton.textContent = getText(state.index === state.questions.length - 1
+    ? { fr: "Voir le rÃ©sultat final", ar: "Ø¹Ø±Ø¶ Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠØ©", en: "See final result" }
+    : { fr: "Question suivante", ar: "Ø§Ù„Ø³Ø¤Ø§Ù„ Ø§Ù„ØªØ§Ù„ÙŠ", en: "Next question" }
+  );
+  nextButton.addEventListener("click", () => {
+    state.index += 1;
+    state.currentAnswer = null;
+    if (state.index >= state.questions.length) renderQuizResult(state, getExperimentConfig(state.experimentId));
+    else renderQuizQuestion(state);
+  });
+  feedback.appendChild(nextButton);
+}
+
+function rerenderActiveQuizLanguage() {
+  if (!activeQuizState || document.body.dataset.page !== "quiz") return;
+  updateQuizTitle(activeQuizState);
+  if (activeQuizState.finished) {
+    renderQuizResult(activeQuizState, getExperimentConfig(activeQuizState.experimentId), { skipPersist: true });
+    return;
+  }
+  renderQuizQuestion(activeQuizState);
+}
+
 function renderQuizQuestion(state) {
+  activeQuizState = state;
+  updateQuizTitle(state);
   const stage = document.getElementById("quiz-stage");
   const progress = document.querySelector("[data-quiz-progress]");
   const config = getExperimentConfig(state.experimentId);
@@ -2144,6 +2375,7 @@ function renderQuizQuestion(state) {
       const correct = selected === question.correct;
       state.answers.push({ selected, correct, question });
       if (correct) state.score += 1;
+      state.currentAnswer = { index: state.index, selected, correct };
       stage.querySelectorAll(".quiz-option").forEach((optionButton) => {
         optionButton.disabled = true;
         const optionIndex = Number(optionButton.dataset.optionIndex);
@@ -2163,12 +2395,22 @@ function renderQuizQuestion(state) {
       );
       nextButton.addEventListener("click", () => {
         state.index += 1;
+        state.currentAnswer = null;
         if (state.index >= state.questions.length) renderQuizResult(state, config);
         else renderQuizQuestion(state);
       });
       feedback.appendChild(nextButton);
     }, { once: true });
   });
+  if (state.currentAnswer && state.currentAnswer.index === state.index) {
+    stage.querySelectorAll(".quiz-option").forEach((optionButton) => {
+      optionButton.disabled = true;
+      const optionIndex = Number(optionButton.dataset.optionIndex);
+      if (optionIndex === question.correct) optionButton.classList.add("correct");
+      else if (optionIndex === state.currentAnswer.selected && !state.currentAnswer.correct) optionButton.classList.add("wrong");
+    });
+    renderAnsweredQuizFeedback(state, question);
+  }
 }
 
 function renderQuizResult(state, config) {
@@ -2225,7 +2467,8 @@ function initQuizPage() {
       en: `Quiz linked to the experiment: ${getText(config.title)}.`
     });
   }
-  renderQuizQuestion({ experimentId, questions, index: 0, score: 0, answers: [] });
+  activeQuizState = { experimentId, questions, index: 0, score: 0, answers: [], currentAnswer: null, finished: false, persisted: false };
+  renderQuizQuestion(activeQuizState);
 }
 
 function initTeacherLogin() {
@@ -2237,16 +2480,30 @@ function initTeacherLogin() {
     const username = String(data.get("username") || "").trim();
     const password = String(data.get("password") || "").trim();
     if (username === "admin" && password === "1234") {
+      localStorage.setItem(STORAGE.adminLogged, "true");
+      localStorage.removeItem(STORAGE.teacherLogged);
+      localStorage.removeItem(STORAGE.currentTeacher);
+      window.location.href = "/admin";
+      return;
+    }
+    const professor = readProfessors().find((item) => String(item.username || "").trim() === username && String(item.password || "") === password);
+    if (professor) {
       localStorage.setItem(STORAGE.teacherLogged, "true");
+      localStorage.removeItem(STORAGE.adminLogged);
+      localStorage.setItem(STORAGE.currentTeacher, professor.name || professor.username);
       window.location.href = "prof-dashboard.html";
       return;
     }
-    alert(getText({ fr: "Identifiants incorrects. Utilisez admin / 1234.", ar: "بيانات غير صحيحة. استعمل admin / 1234." }));
+    alert(getText({
+      fr: "Identifiants incorrects. Utilisez un compte professeur cree par l'admin, ou admin / 1234.",
+      ar: "بيانات غير صحيحة. استعمل حساب أستاذ أنشأه المدير، أو admin / 1234.",
+      en: "Incorrect credentials. Use a professor account created by admin, or admin / 1234."
+    }));
   });
 }
 
 function getTeacherRows() {
-  const rows = [...DEMO_RECORDS];
+  const rows = [];
   const studentName = localStorage.getItem(STORAGE.studentName);
   const studentClass = localStorage.getItem(STORAGE.studentClass) || "CEM2026";
   const studentLevel = normalizeLevelKey(localStorage.getItem(STORAGE.currentLevel) || "cem");
@@ -2292,6 +2549,101 @@ function getTeacherRows() {
     }
   });
   return rows;
+}
+
+function getTeacherRows() {
+  syncStudentTrackingStore();
+  const rowsByKey = new Map();
+  const completedByStudent = new Set();
+  const pendingText = { fr: "En attente", ar: "في الانتظار", en: "Pending" };
+
+  function addOrMergeRow(row) {
+    const classCode = canonicalClassCode(row.classCode || "DIRECT");
+    const experimentId = row.experimentId || "";
+    const key = studentResultKey(row.studentName, classCode, experimentId || "pending");
+    const existing = rowsByKey.get(key) || {};
+    if (existing.completedAt && row.completedAt && String(existing.completedAt).localeCompare(String(row.completedAt)) > 0) return;
+    rowsByKey.set(key, {
+      studentName: row.studentName || existing.studentName || "-",
+      classCode,
+      level: normalizeLevelKey(row.level || existing.level || "cem"),
+      experimentId: experimentId || null,
+      score: Number(row.score ?? existing.score ?? 0),
+      labScore: Number(row.labScore ?? existing.labScore ?? row.score ?? 0),
+      quizScore: Number(row.quizScore ?? existing.quizScore ?? 0),
+      aiEvaluation: row.aiEvaluation || existing.aiEvaluation || pendingText,
+      errors: row.errors || existing.errors || [],
+      completedAt: row.completedAt || existing.completedAt || ""
+    });
+  }
+
+  readJson(STORAGE.students, []).forEach((student) => {
+    const studentClassCode = normalizeLabCode(student.classCode || "DIRECT") === "DIRECT" && student.activeCode
+      ? student.activeCode
+      : student.classCode;
+    addOrMergeRow({
+      studentName: student.name,
+      classCode: studentClassCode,
+      level: student.level,
+      experimentId: null,
+      score: 0,
+      aiEvaluation: pendingText,
+      errors: []
+    });
+  });
+
+  readResultHistory().forEach((item) => {
+    const classCode = canonicalClassCode(item.classCode || "DIRECT");
+    const studentName = item.studentName || "-";
+    const labScore = Number(item.labScore ?? item.score ?? 0);
+    const quizScore = Number(item.quizScore);
+    const score = Number.isFinite(quizScore) ? Math.round((labScore + quizScore) / 2) : labScore;
+    completedByStudent.add(studentResultKey(studentName, classCode, "student"));
+    addOrMergeRow({
+      studentName,
+      classCode,
+      level: item.level,
+      experimentId: item.experimentId,
+      score,
+      labScore,
+      quizScore: Number.isFinite(quizScore) ? quizScore : 0,
+      aiEvaluation: scoreToBadge(score),
+      errors: item.errors || item.mistakes || [],
+      completedAt: item.completedAt || ""
+    });
+  });
+
+  const studentName = localStorage.getItem(STORAGE.studentName);
+  const experimentScores = readJson(STORAGE.experimentScores, {});
+  const lastResult = readJson(STORAGE.lastResult, null);
+  if (studentName) {
+    const studentClass = currentStudentClassCode();
+    const studentLevel = normalizeLevelKey(localStorage.getItem(STORAGE.currentLevel) || "cem");
+    Object.entries(experimentScores).forEach(([experimentId, score]) => {
+      const historyKey = studentResultKey(studentName, studentClass, experimentId);
+      if (rowsByKey.has(historyKey)) return;
+      addOrMergeRow({
+        studentName,
+        classCode: studentClass,
+        level: studentLevel,
+        experimentId,
+        score: Number(score) || 0,
+        labScore: Number(score) || 0,
+        aiEvaluation: scoreToBadge(Number(score) || 0),
+        errors: lastResult && lastResult.experimentId === experimentId ? lastResult.errors : [getExperimentConfig(experimentId).defaultTip],
+        completedAt: lastResult && lastResult.experimentId === experimentId ? lastResult.completedAt : ""
+      });
+    });
+  }
+
+  return [...rowsByKey.values()]
+    .filter((row) => row.experimentId || !completedByStudent.has(studentResultKey(row.studentName, row.classCode, "student")))
+    .sort((a, b) => {
+      if (a.experimentId && !b.experimentId) return -1;
+      if (!a.experimentId && b.experimentId) return 1;
+      return String(b.completedAt || "").localeCompare(String(a.completedAt || ""))
+        || String(a.studentName || "").localeCompare(String(b.studentName || ""));
+    });
 }
 
 function renderTeacherDetail(record) {
@@ -2549,6 +2901,7 @@ function initLabCodeGenerator() {
       level,
       type: codeType,
       subjectId: subject ? subject.id : "",
+      ownerTeacher: localStorage.getItem(STORAGE.currentTeacher) || "",
       createdAt: new Date().toISOString()
     };
     if (codeType === "promo") nextCode.allowedExperiments = selectedPromoLabs;
@@ -2572,7 +2925,10 @@ function updateTeacherStats(rows) {
   const uniqueStudents = new Set(rows.map((r) => r.studentName)).size;
   const scoredRows = rows.filter((r) => r.experimentId && r.score > 0);
   const avg = scoredRows.length ? Math.round(scoredRows.reduce((s, r) => s + r.score, 0) / scoredRows.length) : 0;
-  const codes = readLabCodes();
+  const managedCodes = currentTeacherManagedCodes();
+  const codes = managedCodes === null
+    ? readLabCodes()
+    : readLabCodes().filter((code) => managedCodes.includes(normalizeLabCode(code.code || "DIRECT") || "DIRECT"));
   if (statTotal) statTotal.textContent = uniqueStudents;
   if (statAvg) statAvg.textContent = scoredRows.length ? `${avg}%` : "-";
   if (statExp) statExp.textContent = scoredRows.length;
@@ -2838,7 +3194,7 @@ function assistantIntro(experimentId) {
 }
 
 function assistantStorageKey(experimentId) {
-  return `eduvirtuel-chat:${experimentId || "general"}:${currentLanguage()}`;
+  return `virtulab-tajribati-chat:${experimentId || "general"}:${currentLanguage()}`;
 }
 
 function loadAssistantHistory(experimentId) {
@@ -3004,7 +3360,7 @@ function createAssistantWidget() {
       <div class="assistant-popover" id="assistant-popover">
         <div class="assistant-header">
           <div>
-            <h2>${dualText("Assistant EduVirtuel", "مساعد EduVirtuel")}</h2>
+            <h2>${dualText("Assistant VirtuLab - تجربتي", "مساعد VirtuLab - تجربتي")}</h2>
             <p>${dualText("Assistant educatif pour les experiences et les lecons.", "مساعد تعليمي للتجارب والدروس.")}</p>
           </div>
         </div>
@@ -3017,7 +3373,7 @@ function createAssistantWidget() {
       </div>
       <button class="assistant-launcher" id="assistant-launcher" type="button">
         <span>AI</span>
-        <span>${dualText("Assistant EduVirtuel", "مساعد EduVirtuel")}</span>
+        <span>${dualText("Assistant VirtuLab - تجربتي", "مساعد VirtuLab - تجربتي")}</span>
       </button>
     </div>
   `;
@@ -3290,16 +3646,16 @@ function initLevelExperiences() {
 
 function applyPageTitles() {
   const titles = {
-    index: "EduVirtuel - Accueil",
-    student: "EduVirtuel - Eleve",
-    dashboard: "EduVirtuel - Tableau de bord",
-    experiences: "EduVirtuel - Experiences",
-    experiment: "EduVirtuel - Experience",
-    result: "EduVirtuel - Resultat",
-    quiz: "EduVirtuel - Quiz",
-    "teacher-login": "EduVirtuel - Connexion enseignant",
-    "teacher-dashboard": "EduVirtuel - Espace enseignant",
-    "admin-dashboard": "EduVirtuel - Admin"
+    index: "VirtuLab - تجربتي - Accueil",
+    student: "VirtuLab - تجربتي - Eleve",
+    dashboard: "VirtuLab - تجربتي - Tableau de bord",
+    experiences: "VirtuLab - تجربتي - Experiences",
+    experiment: "VirtuLab - تجربتي - Experience",
+    result: "VirtuLab - تجربتي - Resultat",
+    quiz: "VirtuLab - تجربتي - Quiz",
+    "teacher-login": "VirtuLab - تجربتي - Connexion enseignant",
+    "teacher-dashboard": "VirtuLab - تجربتي - Espace enseignant",
+    "admin-dashboard": "VirtuLab - تجربتي - Admin"
   };
   const pageId = document.body.dataset.page;
   if (pageId && titles[pageId]) document.title = titles[pageId];
@@ -3407,7 +3763,10 @@ function initStudentForm() {
 function renderRegisteredStudents() {
   const target = document.getElementById("registered-students-list");
   if (!target) return;
-  const students = readJson(STORAGE.students, []);
+  syncStudentTrackingStore();
+  const students = readJson(STORAGE.students, [])
+    .map((student, index) => ({ student, index }))
+    .filter((entry) => canTeacherManageStudent(entry.student));
   if (!students.length) {
     target.innerHTML = `<div class="empty-card">${dualText("Aucun compte eleve pour le moment.", "لا يوجد حساب تلميذ حاليا.", "No student account yet.")}</div>`;
     return;
@@ -3415,9 +3774,10 @@ function renderRegisteredStudents() {
 
   target.innerHTML = students
     .slice()
-    .sort((a, b) => new Date(b.lastLoginAt || b.createdAt || 0) - new Date(a.lastLoginAt || a.createdAt || 0))
-    .map((student) => {
+    .sort((a, b) => new Date(b.student.lastLoginAt || b.student.createdAt || 0) - new Date(a.student.lastLoginAt || a.student.createdAt || 0))
+    .map(({ student, index }) => {
       const level = LEVEL_LABELS[normalizeLevelKey(student.level)] || LEVEL_LABELS.cem;
+      const classCode = bestTrackedClassCode(student, student.classCode || "DIRECT");
       const linkedAssignment = findLabCodeAssignment(student.activeCode);
       const linkedLabel = linkedAssignment
         ? getText(getExperimentConfig(linkedAssignment.experimentId).title)
@@ -3428,13 +3788,16 @@ function renderRegisteredStudents() {
             <strong>${escapeHtml(student.name || "-")}</strong>
             <span class="badge badge-light">${escapeHtml(getText(level))}</span>
           </div>
-          <p>${escapeHtml(student.classCode || "DIRECT")}</p>
+          <p>${escapeHtml(classCode)}</p>
           <p>${escapeHtml(linkedLabel)}</p>
           <div class="registered-student-secret">
             <code>${escapeHtml(student.password || "-")}</code>
             <button type="button" class="secondary-btn registered-student-copy" data-copy-student-password="${escapeHtml(student.password || "")}">
               <span aria-hidden="true">📋</span>
               <span>${getText({ fr: "Copier", ar: "نسخ", en: "Copy" })}</span>
+            </button>
+            <button type="button" class="secondary-btn danger-soft-btn registered-student-unlink" data-unlink-student="${escapeHtml(String(index))}">
+              <span>${getText({ fr: "Retirer de ma classe", ar: "إزالة من قسمي", en: "Unlink from class" })}</span>
             </button>
           </div>
         </article>
@@ -3454,6 +3817,9 @@ function renderRegisteredStudents() {
         if (label) label.textContent = getText({ fr: "Copier", ar: "نسخ", en: "Copy" });
       }, 1400);
     });
+  });
+  target.querySelectorAll("[data-unlink-student]").forEach((button) => {
+    button.addEventListener("click", () => unlinkStudentFromTeacherClass(Number(button.dataset.unlinkStudent)));
   });
 }
 
@@ -3683,7 +4049,7 @@ function initTeacherDashboard() {
   const sortButton = document.getElementById("sort-score-btn");
 
   function applyFilters() {
-    rows = getTeacherRows();
+    rows = getTeacherRows().filter((row) => canTeacherManageStudent({ classCode: row.classCode }));
     const query = filterInput ? filterInput.value.trim().toLowerCase() : "";
     let filtered = rows.filter((row) => String(row.classCode || "").toLowerCase().includes(query));
     filtered = filtered.sort((a, b) => descending ? b.score - a.score : a.score - b.score);
@@ -3700,6 +4066,12 @@ function initTeacherDashboard() {
       applyFilters();
     });
   }
+  window.addEventListener("teacher-student-list-changed", applyFilters);
+  window.addEventListener("storage", (event) => {
+    if ([STORAGE.students, STORAGE.resultHistory, STORAGE.quizScores, STORAGE.experimentScores].includes(event.key)) {
+      applyFilters();
+    }
+  });
 
   initLabCodeGenerator();
   renderRegisteredStudents();
@@ -3920,10 +4292,105 @@ function renderQuizResult(state, config) {
   `;
 }
 
+function renderQuizResult(state, config, options = {}) {
+  activeQuizState = state;
+  state.finished = true;
+  updateQuizTitle(state);
+  const stage = document.getElementById("quiz-stage");
+  const progress = document.querySelector("[data-quiz-progress]");
+  if (!stage || !progress) return;
+
+  const finalScore = Math.round((state.score / Math.max(state.questions.length, 1)) * 100);
+  const badge = scoreToBadge(finalScore);
+  const labResult = readJson(STORAGE.lastResult, null) || {};
+
+  if (!options.skipPersist && !state.persisted) {
+    const linkedStudent = upsertCurrentStudentAccount({
+      lastExperimentId: state.experimentId,
+      lastQuizScore: finalScore,
+      lastLabScore: Number(labResult.score || 0),
+      lastCompletedAt: new Date().toISOString()
+    });
+    const quizScores = readJson(STORAGE.quizScores, {});
+    quizScores[state.experimentId] = finalScore;
+    writeJson(STORAGE.quizScores, quizScores);
+
+    const completedAt = new Date().toISOString();
+    const nextResult = {
+      ...labResult,
+      experimentId: state.experimentId,
+      title: config.title,
+      quizScore: finalScore,
+      quizCorrect: state.score,
+      quizTotal: state.questions.length,
+      completedAt
+    };
+    writeJson(STORAGE.lastResult, nextResult);
+
+    const history = readResultHistory();
+    history.unshift({
+      id: `${completedAt}-${state.experimentId}`,
+      studentName: linkedStudent?.name || localStorage.getItem(STORAGE.studentName) || "",
+      classCode: linkedStudent?.classCode || currentStudentClassCode(),
+      level: normalizeLevelKey(linkedStudent?.level || localStorage.getItem(STORAGE.currentLevel) || "cem"),
+      experimentId: state.experimentId,
+      title: config.title,
+      labScore: Number(labResult.score || 0),
+      quizScore: finalScore,
+      quizCorrect: state.score,
+      quizTotal: state.questions.length,
+      errors: labResult.errors || [],
+      completedAt
+    });
+    writeResultHistory(history.slice(0, 80));
+    state.persisted = true;
+  }
+
+  progress.textContent = getText({ fr: "Quiz termine", ar: "اكتمل الاختبار", en: "Quiz completed" });
+  stage.innerHTML = `
+    <div class="quiz-result">
+      <h2>${escapeHtml(getText(config.title))}</h2>
+      <p>${escapeHtml(getText({
+        fr: `Score final : ${finalScore}/100 (${state.score}/${state.questions.length} reponses justes)`,
+        ar: `النتيجة النهائية: ${finalScore}/100 (${state.score}/${state.questions.length} إجابات صحيحة)`,
+        en: `Final score: ${finalScore}/100 (${state.score}/${state.questions.length} correct answers)`
+      }))}</p>
+      <p class="result-badge">${escapeHtml(getText(badge))}</p>
+      <div class="quiz-review-card">
+        <h3>${escapeHtml(getText({ fr: "Revision", ar: "المراجعة", en: "Review" }))}</h3>
+        ${state.answers.map((answer, index) => `
+          <div class="quiz-feedback">
+            <strong>${escapeHtml(getText({ fr: `Question ${index + 1}`, ar: `السؤال ${index + 1}`, en: `Question ${index + 1}` }))}</strong>
+            <p>${escapeHtml(getText(answer.question.prompt))}</p>
+            <p>${escapeHtml(getText({
+              fr: `Bonne reponse : ${getText(answer.question.options[answer.question.correct])}`,
+              ar: `الإجابة الصحيحة: ${getText(answer.question.options[answer.question.correct])}`,
+              en: `Correct answer: ${getText(answer.question.options[answer.question.correct])}`
+            }))}</p>
+            <p>${escapeHtml(getText(answer.question.explanation))}</p>
+          </div>
+        `).join("")}
+      </div>
+      <div class="hero-actions">
+        <a class="primary-btn" href="result.html">${escapeHtml(getText({ fr: "Voir le resultat complet", ar: "عرض النتيجة الكاملة", en: "View full result" }))}</a>
+        <a class="secondary-btn" href="dashboard.html">${escapeHtml(getText({ fr: "Retour au tableau de bord", ar: "العودة إلى لوحة التحكم", en: "Back to dashboard" }))}</a>
+      </div>
+    </div>
+  `;
+}
+
 function initTeacherLogin() {
   const form = document.getElementById("teacher-login-form");
+  const resetForm = document.getElementById("teacher-reset-form");
   if (!form) return;
-  readProfessors();
+  const forgotButton = document.querySelector("[data-teacher-forgot]");
+  const backButton = document.querySelector("[data-teacher-back-login]");
+  const setTeacherResetMode = (isReset) => {
+    form.hidden = isReset;
+    if (resetForm) resetForm.hidden = !isReset;
+  };
+  if (forgotButton) forgotButton.addEventListener("click", () => setTeacherResetMode(true));
+  if (backButton) backButton.addEventListener("click", () => setTeacherResetMode(false));
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const data = new FormData(form);
@@ -3945,11 +4412,58 @@ function initTeacherLogin() {
       return;
     }
     alert(getText({
-      fr: "Identifiants incorrects. Admin : admin / 1234. Professeur demo : prof / 1234.",
-      ar: "Identifiants incorrects. Admin : admin / 1234. Professeur demo : prof / 1234.",
-      en: "Incorrect credentials. Admin: admin / 1234. Demo professor: prof / 1234."
+      fr: "Identifiants incorrects. Utilisez un compte professeur cree par l'admin, ou admin / 1234.",
+      ar: "Identifiants incorrects. Utilisez un compte professeur cree par l'admin, ou admin / 1234.",
+      en: "Incorrect credentials. Use a professor account created by admin, or admin / 1234."
     }));
   });
+
+  if (resetForm) {
+    resetForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = new FormData(resetForm);
+      const username = String(data.get("resetUsername") || "").trim();
+      const rawResetClassCode = String(data.get("resetClassCode") || "").trim();
+      const classCode = normalizeLabCode(rawResetClassCode || "DIRECT");
+      const email = String(data.get("resetEmail") || "").trim();
+      const newPassword = String(data.get("newPassword") || "").trim();
+      const confirmPassword = String(data.get("confirmPassword") || "").trim();
+      const validationError = validateResetPassword(newPassword, confirmPassword);
+      if (validationError) {
+        alert(validationError);
+        return;
+      }
+      const professors = readProfessors();
+      const professorIndex = professors.findIndex((item) => String(item.username || "").trim().toLowerCase() === username.toLowerCase());
+      if (professorIndex === -1) {
+        alert(getText({ fr: "Aucun professeur trouve avec ce nom d'utilisateur.", ar: "لم يتم العثور على أستاذ بهذا الاسم.", en: "No teacher found with this username." }));
+        return;
+      }
+      const professor = professors[professorIndex];
+      const teacherCodes = professorClassCodes(professor).map((code) => normalizeLabCode(code));
+      const adminValidated = rawResetClassCode.toUpperCase() === "ADMIN-1234";
+      if (!adminValidated && !teacherCodes.includes(classCode)) {
+        alert(getText({ fr: "Le code classe ne correspond pas a ce professeur.", ar: "رمز القسم لا يطابق هذا الأستاذ.", en: "The class code does not match this teacher." }));
+        return;
+      }
+      if (!accountEmailMatches(professor, email)) {
+        alert(getText({ fr: "L'email ne correspond pas au compte.", ar: "البريد الإلكتروني لا يطابق الحساب.", en: "The email does not match this account." }));
+        return;
+      }
+      if (professors.some((item, index) => index !== professorIndex && String(item.password || "") === newPassword)) {
+        alert(getText({ fr: "Ce mot de passe est deja utilise par un autre compte.", ar: "كلمة المرور مستعملة في حساب آخر.", en: "This password is already used by another account." }));
+        return;
+      }
+      professors[professorIndex] = { ...professor, password: newPassword, passwordUpdatedAt: new Date().toISOString() };
+      writeProfessors(professors);
+      resetForm.reset();
+      setTeacherResetMode(false);
+      await showResetConfirmation(
+        { fr: "Compte enseignant mis a jour", ar: "تم تحديث حساب الأستاذ", en: "Teacher account updated" },
+        { fr: "Votre mot de passe enseignant a ete reinitialise avec succes.", ar: "تمت إعادة تعيين كلمة مرور الأستاذ بنجاح.", en: "Your teacher password has been reset successfully." }
+      );
+    });
+  }
 }
 
 function renderAdminProfessors() {
@@ -3969,7 +4483,7 @@ function renderAdminProfessors() {
   target.querySelectorAll("[data-remove-professor]").forEach((button) => {
     button.addEventListener("click", () => {
       const next = readProfessors().filter((_, index) => index !== Number(button.dataset.removeProfessor));
-      writeProfessors(next.length ? next : defaultProfessors());
+      writeProfessors(next);
       renderAdminDashboard();
     });
   });
@@ -4089,10 +4603,215 @@ function professorClassCodes(professor) {
   return codes.length ? [...new Set(codes)] : ["DIRECT"];
 }
 
+function currentTeacherProfile() {
+  const current = String(localStorage.getItem(STORAGE.currentTeacher) || "").trim().toLowerCase();
+  if (!current) return null;
+  return readProfessors().find((professor) => {
+    return String(professor.name || "").trim().toLowerCase() === current
+      || String(professor.username || "").trim().toLowerCase() === current;
+  }) || null;
+}
+
+function currentTeacherManagedCodes() {
+  if (localStorage.getItem(STORAGE.adminLogged) === "true") return null;
+  const professor = currentTeacherProfile();
+  const current = String(localStorage.getItem(STORAGE.currentTeacher) || "").trim().toLowerCase();
+  const profileCodes = professor ? professorClassCodes(professor).map((code) => normalizeLabCode(code || "DIRECT") || "DIRECT") : [];
+  const labCodes = readLabCodes();
+  const ownedCodes = labCodes
+    .filter((code) => String(code.ownerTeacher || "").trim().toLowerCase() === current)
+    .map((code) => normalizeLabCode(code.code || "DIRECT") || "DIRECT");
+  const legacyUnownedCodes = labCodes
+    .filter((code) => getAssignmentType(code) === "promo" && !String(code.ownerTeacher || "").trim())
+    .map((code) => normalizeLabCode(code.code || "DIRECT") || "DIRECT");
+  const linkedResultCodes = readResultHistory()
+    .map((item) => normalizeLabCode(item.classCode || ""))
+    .filter((code) => {
+      if (!code || code === "DIRECT") return false;
+      const assignment = findLabCodeAssignment(code);
+      if (!assignment) return profileCodes.includes(code);
+      const owner = String(assignment.ownerTeacher || "").trim().toLowerCase();
+      return !owner || owner === current;
+    });
+  const linkedStudentCodes = readJson(STORAGE.students, [])
+    .flatMap((student) => [student.classCode, student.activeCode])
+    .map((code) => normalizeLabCode(code || ""))
+    .filter((code) => {
+      if (!code || code === "DIRECT") return false;
+      const assignment = findLabCodeAssignment(code);
+      if (!assignment) return profileCodes.includes(code);
+      const owner = String(assignment.ownerTeacher || "").trim().toLowerCase();
+      return !owner || owner === current;
+    });
+  return [...new Set([...profileCodes, ...ownedCodes, ...legacyUnownedCodes, ...linkedResultCodes, ...linkedStudentCodes])];
+}
+
+function canTeacherManageStudent(student) {
+  const managedCodes = currentTeacherManagedCodes();
+  if (managedCodes === null) return true;
+  const studentCodes = [
+    normalizeLabCode(student.classCode || "DIRECT") || "DIRECT",
+    normalizeLabCode(student.activeCode || "")
+  ].filter(Boolean);
+  return studentCodes.some((code) => managedCodes.includes(code));
+}
+
+function confirmStudentAction(message) {
+  return window.confirm(getText(message));
+}
+
+function unlinkStudentFromTeacherClass(studentIndex) {
+  const students = readJson(STORAGE.students, []);
+  const student = students[studentIndex];
+  if (!student || !canTeacherManageStudent(student)) {
+    alert(getText({
+      fr: "Vous ne pouvez retirer que les eleves de vos propres codes classe.",
+      ar: "يمكنك إزالة التلاميذ المرتبطين برموز أقسامك فقط.",
+      en: "You can only remove students linked to your own class codes."
+    }));
+    return;
+  }
+  const confirmed = confirmStudentAction({
+    fr: `Retirer ${student.name || "cet eleve"} de votre classe ? Son compte restera actif sur la plateforme.`,
+    ar: `هل تريد إزالة ${student.name || "هذا التلميذ"} من قسمك؟ سيبقى حسابه نشطا في المنصة.`,
+    en: `Remove ${student.name || "this student"} from your class? The account will remain active on the platform.`
+  });
+  if (!confirmed) return;
+  students[studentIndex] = {
+    ...student,
+    classCode: "DIRECT",
+    activeCode: "",
+    unlinkedAt: new Date().toISOString()
+  };
+  writeJson(STORAGE.students, students);
+  window.dispatchEvent(new CustomEvent("teacher-student-list-changed"));
+}
+
+function deleteStudentPermanently(studentIndex) {
+  if (localStorage.getItem(STORAGE.adminLogged) !== "true") {
+    alert(getText({
+      fr: "Seul l'admin peut supprimer definitivement un compte eleve.",
+      ar: "المدير فقط يمكنه حذف حساب التلميذ نهائيا.",
+      en: "Only admin can permanently delete a student account."
+    }));
+    return;
+  }
+  const students = readJson(STORAGE.students, []);
+  const student = students[studentIndex];
+  if (!student) return;
+  const confirmed = confirmStudentAction({
+    fr: `Supprimer definitivement le compte de ${student.name || "cet eleve"} ? Cette action retire le compte de toute la plateforme.`,
+    ar: `هل تريد حذف حساب ${student.name || "هذا التلميذ"} نهائيا؟ سيحذف الحساب من كامل المنصة.`,
+    en: `Permanently delete ${student.name || "this student"}? This removes the account from the entire platform.`
+  });
+  if (!confirmed) return;
+  const deletedName = String(student.name || "").toLowerCase();
+  const deletedCode = normalizeLabCode(student.classCode || "DIRECT");
+  writeJson(STORAGE.students, students.filter((_, index) => index !== studentIndex));
+  const nextHistory = readResultHistory().filter((item) => {
+    return String(item.studentName || "").toLowerCase() !== deletedName
+      || normalizeLabCode(item.classCode || "DIRECT") !== deletedCode;
+  });
+  writeResultHistory(nextHistory);
+  renderAdminDashboard();
+}
+
+function getAdminStats() {
+  const professors = readProfessors();
+  const students = readJson(STORAGE.students, []);
+  const classes = adminClassCodes();
+  const history = readResultHistory();
+  const rows = getTeacherRows();
+  const labCount = Object.keys(EXPERIMENTS).length;
+  const completedExperiments = history.length || rows.filter((row) => row.experimentId).length;
+  const quizzesCompleted = history.filter((item) => Number.isFinite(Number(item.quizScore))).length;
+  const scoredItems = history.length
+    ? history.map((item) => {
+        const lab = Number(item.labScore ?? item.score ?? 0);
+        const quiz = Number(item.quizScore ?? lab);
+        return Math.round((lab + quiz) / 2);
+      })
+    : rows.filter((row) => row.experimentId).map((row) => Number(row.score || 0));
+  const averageSuccess = scoredItems.length
+    ? Math.round(scoredItems.reduce((sum, score) => sum + score, 0) / scoredItems.length)
+    : 0;
+  return {
+    professors,
+    students,
+    classes,
+    history,
+    rows,
+    labCount,
+    completedExperiments,
+    quizzesCompleted,
+    averageSuccess,
+    recentActivity: history.slice(0, 6)
+  };
+}
+
+function setAdminStat(id, value) {
+  const target = document.getElementById(id);
+  if (target) target.textContent = String(value);
+}
+
+function adminFilterCard(card, query) {
+  const text = card.textContent.toLowerCase();
+  return !query || text.includes(query);
+}
+
+function applyAdminFilters() {
+  document.querySelectorAll("[data-admin-search]").forEach((input) => {
+    const target = document.getElementById(input.dataset.adminSearch);
+    if (!target) return;
+    const query = String(input.value || "").trim().toLowerCase();
+    target.querySelectorAll(".admin-list-card").forEach((card) => {
+      card.dataset.searchMatch = adminFilterCard(card, query) ? "true" : "false";
+    });
+  });
+
+  const studentLevel = document.getElementById("admin-student-level-filter");
+  if (studentLevel) {
+    document.querySelectorAll("#admin-student-list .admin-list-card").forEach((card) => {
+      const wanted = studentLevel.value || "all";
+      card.dataset.levelMatch = wanted === "all" || card.dataset.adminLevel === wanted ? "true" : "false";
+    });
+  }
+
+  const activityType = document.getElementById("admin-activity-type-filter");
+  if (activityType) {
+    document.querySelectorAll("#admin-activity-list .admin-list-card").forEach((card) => {
+      const score = Number(card.dataset.adminScore || 0);
+      const wanted = activityType.value || "all";
+      card.dataset.typeMatch = wanted === "all" || (wanted === "success" && score >= 60) || (wanted === "needs-work" && score < 60) ? "true" : "false";
+    });
+  }
+
+  document.querySelectorAll(".admin-list-card").forEach((card) => {
+    const search = card.dataset.searchMatch !== "false";
+    const level = card.dataset.levelMatch !== "false";
+    const type = card.dataset.typeMatch !== "false";
+    card.hidden = !(search && level && type);
+  });
+}
+
+function initAdminFilters() {
+  document.querySelectorAll("[data-admin-search]").forEach((input) => {
+    input.addEventListener("input", applyAdminFilters);
+  });
+  ["admin-student-level-filter", "admin-activity-type-filter"].forEach((id) => {
+    const select = document.getElementById(id);
+    if (select) select.addEventListener("change", applyAdminFilters);
+  });
+}
+
 function renderAdminProfessors() {
   const target = document.getElementById("admin-professor-list");
   if (!target) return;
   const professors = readProfessors();
+  if (!professors.length) {
+    target.innerHTML = `<div class="empty-card">${escapeHtml(getText({ fr: "Aucun professeur cree pour le moment.", ar: "لم يتم إنشاء أي أستاذ بعد.", en: "No teacher account yet." }))}</div>`;
+    return;
+  }
   target.innerHTML = professors.map((professor, index) => {
     const codes = professorClassCodes(professor);
     const linkedStudents = codes.flatMap((code) => studentsForClassCode(code));
@@ -4108,7 +4827,7 @@ function renderAdminProfessors() {
         </div>
         <div class="admin-linked-block">
           ${codes.map((code) => `<span class="badge badge-light">${escapeHtml(code)}</span>`).join("")}
-          <span>${escapeHtml(String(linkedStudents.length))} etudiant(s) lies</span>
+          <span>${escapeHtml(String(linkedStudents.length))} ${escapeHtml(getText({ fr: "etudiant(s) lies", ar: "تلميذ مرتبط", en: "linked student(s)" }))}</span>
         </div>
       </article>
     `;
@@ -4116,7 +4835,7 @@ function renderAdminProfessors() {
   target.querySelectorAll("[data-remove-professor]").forEach((button) => {
     button.addEventListener("click", () => {
       const next = readProfessors().filter((_, index) => index !== Number(button.dataset.removeProfessor));
-      writeProfessors(next.length ? next : defaultProfessors());
+      writeProfessors(next);
       renderAdminDashboard();
     });
   });
@@ -4126,24 +4845,28 @@ function renderAdminClasses() {
   const target = document.getElementById("admin-class-list");
   if (!target) return;
   const classes = adminClassCodes();
+  if (!classes.length) {
+    target.innerHTML = `<div class="empty-card">${escapeHtml(getText({ fr: "Aucun code classe disponible.", ar: "لا يوجد رمز قسم حاليا.", en: "No class code available." }))}</div>`;
+    return;
+  }
   target.innerHTML = classes.map((item) => {
     const students = studentsForClassCode(item.code);
     const level = LEVEL_LABELS[normalizeLevelKey(item.level)] || LEVEL_LABELS.cem;
-    const professorName = item.professor ? (item.professor.name || item.professor.username) : "Aucun professeur lie";
-    const labs = item.labs.length ? item.labs.map((lab) => getText(getExperimentConfig(lab).title)).join(", ") : "Tous / libre";
+    const professorName = item.professor ? (item.professor.name || item.professor.username) : getText({ fr: "Aucun professeur lie", ar: "لا يوجد أستاذ مرتبط", en: "No linked teacher" });
+    const labs = item.labs.length ? item.labs.map((lab) => getText(getExperimentConfig(lab).title)).join(", ") : getText({ fr: "Tous / libre", ar: "الكل / حر", en: "All / open" });
     return `
       <article class="admin-list-card admin-list-card-column">
         <div class="admin-row-main">
           <div>
             <strong>${escapeHtml(item.code)}</strong>
             <p>${escapeHtml(item.source)} - ${escapeHtml(getText(level))}</p>
-            <p>Professeur : ${escapeHtml(professorName)}</p>
-            <p>Labs : ${escapeHtml(labs)}</p>
+            <p>${escapeHtml(getText({ fr: "Professeur", ar: "الأستاذ", en: "Teacher" }))} : ${escapeHtml(professorName)}</p>
+            <p>${escapeHtml(getText({ fr: "Labs", ar: "المخابر", en: "Labs" }))} : ${escapeHtml(labs)}</p>
           </div>
-          <span class="badge badge-light">${escapeHtml(String(students.length))} etudiant(s)</span>
+          <span class="badge badge-light">${escapeHtml(String(students.length))} ${escapeHtml(getText({ fr: "etudiant(s)", ar: "تلميذ", en: "student(s)" }))}</span>
         </div>
         <div class="admin-chip-list">
-          ${students.length ? students.map((student) => `<span>${escapeHtml(student.name || "-")}</span>`).join("") : "<span>Aucun etudiant</span>"}
+          ${students.length ? students.map((student) => `<span>${escapeHtml(student.name || "-")}</span>`).join("") : `<span>${escapeHtml(getText({ fr: "Aucun etudiant", ar: "لا يوجد تلميذ", en: "No student" }))}</span>`}
         </div>
       </article>
     `;
@@ -4154,29 +4877,39 @@ function renderAdminStudents() {
   const target = document.getElementById("admin-student-list");
   if (!target) return;
   const students = readJson(STORAGE.students, []);
+  const rankMap = new Map(getStudentRankRows().map((item) => [`${String(item.studentName || "").toLowerCase()}|${normalizeLabCode(item.classCode)}`, item]));
   if (!students.length) {
     target.innerHTML = `<div class="empty-card">${escapeHtml(getText({ fr: "Aucun eleve inscrit.", ar: "Aucun eleve inscrit.", en: "No registered student." }))}</div>`;
     return;
   }
   target.innerHTML = students
-    .slice()
-    .sort((a, b) => String(a.classCode || "DIRECT").localeCompare(String(b.classCode || "DIRECT")) || String(a.name || "").localeCompare(String(b.name || "")))
-    .map((student) => {
+    .map((student, index) => ({ student, index }))
+    .sort((a, b) => String(a.student.classCode || "DIRECT").localeCompare(String(b.student.classCode || "DIRECT")) || String(a.student.name || "").localeCompare(String(b.student.name || "")))
+    .map(({ student, index }) => {
       const level = LEVEL_LABELS[normalizeLevelKey(student.level)] || LEVEL_LABELS.cem;
+      const levelKey = normalizeLevelKey(student.level);
       const code = canonicalClassCode(student.classCode || "DIRECT");
       const ranking = rankMap.get(`${String(student.name || "").toLowerCase()}|${normalizeLabCode(code)}`);
-      const kind = normalizeLabCode(code) === "DIRECT" ? "Visiteur sans code classe" : "Lie au code classe";
+      const kind = normalizeLabCode(code) === "DIRECT" ? getText({ fr: "Visiteur sans code classe", ar: "زائر بدون رمز قسم", en: "Visitor without class code" }) : getText({ fr: "Lie au code classe", ar: "مرتبط برمز قسم", en: "Linked to class code" });
       return `
-        <article class="admin-list-card">
+        <article class="admin-list-card" data-admin-level="${escapeHtml(levelKey)}">
           <div>
             <strong>${escapeHtml(student.name || "-")}</strong>
-            <p>${escapeHtml(getText(level))} - ${escapeHtml(kind)} - Rang #${escapeHtml(String(ranking?.rank || "-"))}</p>
+            <p>${escapeHtml(getText(level))} - ${escapeHtml(kind)} - ${escapeHtml(getText({ fr: "Rang", ar: "الترتيب", en: "Rank" }))} #${escapeHtml(String(ranking?.rank || "-"))}</p>
             <code>${escapeHtml(code)} | ${escapeHtml(student.password || "-")}</code>
           </div>
-          <span class="badge badge-light">${escapeHtml(String(ranking?.score ?? 0))}%</span>
+          <div class="admin-student-actions">
+            <span class="badge badge-light">${escapeHtml(String(ranking?.score ?? 0))}%</span>
+            <button type="button" class="secondary-btn danger-soft-btn" data-delete-student="${escapeHtml(String(index))}">
+              ${escapeHtml(getText({ fr: "Supprimer definitivement", ar: "حذف نهائي", en: "Delete permanently" }))}
+            </button>
+          </div>
         </article>
       `;
     }).join("");
+  target.querySelectorAll("[data-delete-student]").forEach((button) => {
+    button.addEventListener("click", () => deleteStudentPermanently(Number(button.dataset.deleteStudent)));
+  });
 }
 
 function renderAdminRanking() {
@@ -4207,15 +4940,15 @@ function renderAdminActivity() {
   const history = readResultHistory();
   if (history.length) {
     target.innerHTML = history.map((item) => `
-      <article class="admin-list-card">
+      <article class="admin-list-card" data-admin-score="${escapeHtml(String(Math.round(((Number(item.labScore || 0)) + (Number(item.quizScore || item.labScore || 0))) / 2)))}">
         <div>
           <strong>${escapeHtml(item.studentName || "-")}</strong>
           <p>${escapeHtml(item.classCode || "DIRECT")} - ${escapeHtml(getText(item.title || getExperimentConfig(item.experimentId).title))}</p>
           <p>${escapeHtml(new Date(item.completedAt).toLocaleString())}</p>
         </div>
         <div class="admin-score-pair">
-          <span>Labo: ${escapeHtml(String(item.labScore || 0))}%</span>
-          <span>Quiz: ${escapeHtml(String(item.quizScore || 0))}%</span>
+          <span>${escapeHtml(getText({ fr: "Labo", ar: "المخبر", en: "Lab" }))}: ${escapeHtml(String(item.labScore || 0))}%</span>
+          <span>${escapeHtml(getText({ fr: "Quiz", ar: "اختبار", en: "Quiz" }))}: ${escapeHtml(String(item.quizScore || 0))}%</span>
         </div>
       </article>
     `).join("");
@@ -4225,7 +4958,7 @@ function renderAdminActivity() {
   target.innerHTML = rows.map((row) => {
     const experiment = row.experimentId ? getText(getExperimentConfig(row.experimentId).title) : getText({ fr: "Pas encore d'experience", ar: "Pas encore d'experience", en: "No experiment yet" });
     return `
-      <article class="admin-list-card">
+      <article class="admin-list-card" data-admin-score="${escapeHtml(String(row.score || 0))}">
         <div>
           <strong>${escapeHtml(row.studentName)}</strong>
           <p>${escapeHtml(row.classCode)} - ${escapeHtml(experiment)}</p>
@@ -4236,24 +4969,97 @@ function renderAdminActivity() {
   }).join("");
 }
 
+function renderAdminRecentActivity() {
+  const target = document.getElementById("admin-recent-activity-list");
+  if (!target) return;
+  const history = readResultHistory().slice(0, 6);
+  const rows = history.length ? history : getTeacherRows().filter((row) => row.experimentId).slice(0, 6);
+  if (!rows.length) {
+    target.innerHTML = `<div class="empty-card">${escapeHtml(getText({ fr: "Aucune activite recente.", ar: "لا يوجد نشاط حديث.", en: "No recent activity." }))}</div>`;
+    return;
+  }
+  target.innerHTML = rows.map((item) => {
+    const title = item.title ? getText(item.title) : getText(getExperimentConfig(item.experimentId).title);
+    const score = Number(item.quizScore ?? item.labScore ?? item.score ?? 0);
+    const date = item.completedAt ? new Date(item.completedAt).toLocaleString() : getText({ fr: "Session demo", ar: "جلسة تجريبية", en: "Demo session" });
+    return `
+      <article class="admin-list-card admin-timeline-card">
+        <span class="admin-timeline-dot" aria-hidden="true"></span>
+        <div>
+          <strong>${escapeHtml(item.studentName || "-")}</strong>
+          <p>${escapeHtml(title)} - ${escapeHtml(item.classCode || "DIRECT")}</p>
+          <p>${escapeHtml(date)}</p>
+        </div>
+        <span class="badge badge-light">${escapeHtml(String(score))}%</span>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderAdminLabs() {
+  const target = document.getElementById("admin-lab-list");
+  if (!target) return;
+  const labs = Object.values(EXPERIMENTS);
+  target.innerHTML = labs.map((lab) => {
+    const audience = EXPERIMENT_AUDIENCE[lab.id] || { levels: [], subjects: [] };
+    const levels = audience.levels.length ? audience.levels.map((level) => getText(LEVEL_LABELS[normalizeLevelKey(level)] || { fr: level, ar: level, en: level })).join(", ") : getText({ fr: "Tous niveaux", ar: "كل المستويات", en: "All levels" });
+    const quizCount = Array.isArray(lab.quiz) ? lab.quiz.length : 0;
+    return `
+      <article class="admin-list-card admin-list-card-column">
+        <div class="admin-row-main">
+          <div>
+            <strong>${escapeHtml(getText(lab.title))}</strong>
+            <p>${escapeHtml(getText(lab.subject || { fr: "Sciences", ar: "علوم", en: "Science" }))} - ${escapeHtml(levels)}</p>
+          </div>
+          <span class="badge badge-light">${escapeHtml(String(quizCount))} ${escapeHtml(getText({ fr: "questions", ar: "أسئلة", en: "questions" }))}</span>
+        </div>
+        <div class="admin-chip-list">
+          <span>${escapeHtml(getText({ fr: "Mode virtuel", ar: "نمط افتراضي", en: "Virtual mode" }))}</span>
+          <span>${escapeHtml(lab.id)}</span>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderAdminLanguages() {
+  const target = document.getElementById("admin-language-list");
+  if (!target) return;
+  const languages = [
+    { code: "FR", name: { fr: "Francais", ar: "الفرنسية", en: "French" }, status: { fr: "Interface principale", ar: "الواجهة الرئيسية", en: "Primary interface" } },
+    { code: "AR", name: { fr: "Arabe", ar: "العربية", en: "Arabic" }, status: { fr: "Support RTL", ar: "دعم الكتابة من اليمين", en: "RTL support" } },
+    { code: "EN", name: { fr: "Anglais", ar: "الإنجليزية", en: "English" }, status: { fr: "Support international", ar: "دعم دولي", en: "International support" } }
+  ];
+  target.innerHTML = languages.map((language) => `
+    <article class="admin-list-card">
+      <div>
+        <strong>${escapeHtml(language.code)} - ${escapeHtml(getText(language.name))}</strong>
+        <p>${escapeHtml(getText(language.status))}</p>
+      </div>
+      <span class="badge badge-light">${escapeHtml(getText({ fr: "Actif", ar: "نشط", en: "Active" }))}</span>
+    </article>
+  `).join("");
+}
+
 function renderAdminDashboard() {
-  const professors = readProfessors();
-  const students = readJson(STORAGE.students, []);
-  const codes = adminClassCodes();
-  const completed = readResultHistory().length || getTeacherRows().filter((row) => row.experimentId).length;
-  const statProfessors = document.getElementById("admin-stat-professors");
-  const statStudents = document.getElementById("admin-stat-students");
-  const statCodes = document.getElementById("admin-stat-codes");
-  const statExperiments = document.getElementById("admin-stat-experiments");
-  if (statProfessors) statProfessors.textContent = professors.length;
-  if (statStudents) statStudents.textContent = students.length;
-  if (statCodes) statCodes.textContent = codes.length;
-  if (statExperiments) statExperiments.textContent = completed;
+  const stats = getAdminStats();
+  setAdminStat("admin-stat-professors", stats.professors.length);
+  setAdminStat("admin-stat-students", stats.students.length);
+  setAdminStat("admin-stat-codes", stats.classes.length);
+  setAdminStat("admin-stat-experiments", stats.completedExperiments);
+  setAdminStat("admin-stat-labs", stats.labCount);
+  setAdminStat("admin-stat-quizzes", stats.quizzesCompleted);
+  setAdminStat("admin-stat-success", `${stats.averageSuccess}%`);
+  setAdminStat("admin-stat-active", stats.recentActivity.length || stats.rows.filter((row) => row.experimentId).length);
   renderAdminProfessors();
   renderAdminClasses();
   renderAdminStudents();
   renderAdminRanking();
+  renderAdminLabs();
+  renderAdminLanguages();
+  renderAdminRecentActivity();
   renderAdminActivity();
+  applyAdminFilters();
 }
 
 function renderAdminLogin() {
@@ -4308,6 +5114,7 @@ function initAdminDashboard() {
     renderAdminLogin();
     return;
   }
+  initAdminFilters();
   const form = document.getElementById("admin-professor-form");
   if (form) {
     form.addEventListener("submit", (event) => {
@@ -4406,6 +5213,8 @@ async function copyTextValue(value) {
 
 function showStudentPasswordModal(studentName, password) {
   const modal = ensureStudentPasswordModal();
+  const title = modal.querySelector("#student-password-modal-title");
+  const icon = modal.querySelector(".student-password-modal__icon");
   const text = modal.querySelector("#student-password-modal-text");
   const code = modal.querySelector("#student-password-modal-code");
   const status = modal.querySelector("#student-password-modal-status");
@@ -4415,6 +5224,9 @@ function showStudentPasswordModal(studentName, password) {
 
   if (!text || !code || !status || !confirm || !copyButton) return Promise.resolve();
 
+  if (title) title.innerHTML = dualText("Ton code est pret", "رمزك جاهز", "Your code is ready");
+  if (icon) icon.textContent = "KEY";
+  copyButton.hidden = false;
   text.innerHTML = localizedTextMarkup({
     fr: `Compte cree pour ${studentName}. Sauvegarde ce code maintenant : tu devras l'utiliser pour te connecter plus tard.`,
     ar: `تم إنشاء الحساب باسم ${studentName}. احتفظ بهذا الرمز جيدا من أجل الدخول في المرة القادمة.`,
@@ -4456,6 +5268,79 @@ function showStudentPasswordModal(studentName, password) {
   });
 }
 
+function validateResetPassword(password, confirmPassword) {
+  if (!password || password.length < 6) {
+    return getText({
+      fr: "Le nouveau mot de passe doit contenir au moins 6 caracteres.",
+      ar: "يجب أن تحتوي كلمة المرور الجديدة على 6 أحرف على الأقل.",
+      en: "The new password must contain at least 6 characters."
+    });
+  }
+  if (!/[A-Za-zÀ-ÿ\u0600-\u06FF]/.test(password) || !/[0-9]/.test(password)) {
+    return getText({
+      fr: "Ajoutez au moins une lettre et un chiffre.",
+      ar: "أضف حرفا واحدا ورقما واحدا على الأقل.",
+      en: "Add at least one letter and one number."
+    });
+  }
+  if (password !== confirmPassword) {
+    return getText({
+      fr: "La confirmation ne correspond pas.",
+      ar: "التأكيد لا يطابق كلمة المرور.",
+      en: "The confirmation does not match."
+    });
+  }
+  return "";
+}
+
+function accountEmailMatches(account, email) {
+  const expected = String(account?.email || "").trim().toLowerCase();
+  const provided = String(email || "").trim().toLowerCase();
+  return !provided || !expected || expected === provided;
+}
+
+function showResetConfirmation(titleText, bodyText) {
+  const modal = ensureStudentPasswordModal();
+  const title = modal.querySelector("#student-password-modal-title");
+  const icon = modal.querySelector(".student-password-modal__icon");
+  const text = modal.querySelector("#student-password-modal-text");
+  const code = modal.querySelector("#student-password-modal-code");
+  const status = modal.querySelector("#student-password-modal-status");
+  const confirm = modal.querySelector("#student-password-modal-confirm");
+  const copyButton = modal.querySelector("#student-password-modal-copy");
+  const closeButtons = modal.querySelectorAll("[data-password-close]");
+  if (!text || !code || !status || !confirm || !copyButton) return Promise.resolve();
+
+  if (title) title.innerHTML = localizedTextMarkup(titleText);
+  if (icon) icon.textContent = "OK";
+  text.innerHTML = localizedTextMarkup(bodyText);
+  code.textContent = getText({ fr: "Mot de passe mis a jour", ar: "تم تحديث كلمة المرور", en: "Password updated" });
+  status.textContent = getText({
+    fr: "Vous pouvez maintenant vous reconnecter avec le nouveau mot de passe.",
+    ar: "يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.",
+    en: "You can now log in with the new password."
+  });
+  copyButton.hidden = true;
+  modal.hidden = false;
+  document.body.classList.add("modal-open");
+
+  return new Promise((resolve) => {
+    const cleanup = () => {
+      modal.hidden = true;
+      copyButton.hidden = false;
+      document.body.classList.remove("modal-open");
+      confirm.removeEventListener("click", onConfirm);
+      closeButtons.forEach((button) => button.removeEventListener("click", onConfirm));
+    };
+    const onConfirm = () => {
+      cleanup();
+      resolve();
+    };
+    confirm.addEventListener("click", onConfirm);
+    closeButtons.forEach((button) => button.addEventListener("click", onConfirm));
+  });
+}
+
 function initStudentForm() {
   const form = document.getElementById("student-form");
   if (!form) return;
@@ -4484,9 +5369,9 @@ function initStudentForm() {
 
   if (formNote) {
     formNote.innerHTML = `
-      <span class="lang-fr">Si tu laisses ce champ vide, EduVirtuel cree un mot de passe unique pour toi. Garde-le pour rouvrir le meme compte plus tard.</span>
-      <span class="lang-ar">إذا تركت هذا الحقل فارغا، سينشئ EduVirtuel كلمة مرور فريدة لك. احتفظ بها للدخول مرة أخرى.</span>
-      <span class="lang-en">If you leave this empty, EduVirtuel creates a unique password for you. Keep it so you can sign in again later.</span>
+      <span class="lang-fr">Si tu laisses ce champ vide, VirtuLab - تجربتي cree un mot de passe unique pour toi. Garde-le pour rouvrir le meme compte plus tard.</span>
+      <span class="lang-ar">إذا تركت هذا الحقل فارغا، سينشئ VirtuLab - تجربتي كلمة مرور فريدة لك. احتفظ بها للدخول مرة أخرى.</span>
+      <span class="lang-en">If you leave this empty, VirtuLab - تجربتي creates a unique password for you. Keep it so you can sign in again later.</span>
     `;
   }
 
@@ -4570,6 +5455,7 @@ function initStudentForm() {
   const signupForm = document.getElementById("student-signup-form");
   const promoForm = document.getElementById("student-promo-form");
   const loginForm = document.getElementById("student-login-form");
+  const resetForm = document.getElementById("student-reset-form");
   if (!signupForm || !promoForm || !loginForm) return;
   const levelInput = signupForm.querySelector('input[name="level"]');
   const levelButtons = document.querySelectorAll("[data-level-choice]");
@@ -4578,6 +5464,8 @@ function initStudentForm() {
   const levelPanel = document.getElementById("student-level-panel");
   const promoCodeInput = promoForm.querySelector('input[name="promoCode"]');
   const promoLevelPreview = document.getElementById("student-promo-level");
+  const forgotButton = document.querySelector("[data-student-forgot]");
+  const backLoginButton = document.querySelector("[data-student-back-login]");
   const savedLevel = normalizeLevelKey(localStorage.getItem(STORAGE.currentLevel) || "cem");
 
   function selectLevel(level) {
@@ -4623,6 +5511,8 @@ function initStudentForm() {
   authTabs.forEach((button) => {
     button.addEventListener("click", () => setMode(button.dataset.authMode || "signup"));
   });
+  if (forgotButton) forgotButton.addEventListener("click", () => setMode("reset"));
+  if (backLoginButton) backLoginButton.addEventListener("click", () => setMode("login"));
   if (promoCodeInput) promoCodeInput.addEventListener("input", updatePromoPreview);
   setMode("signup");
   updatePromoPreview();
@@ -4774,6 +5664,53 @@ function initStudentForm() {
     }
     window.location.href = "dashboard.html";
   });
+
+  if (resetForm) {
+    resetForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = new FormData(resetForm);
+      const resetName = String(data.get("resetName") || "").trim().toLowerCase();
+      const resetClassCode = canonicalClassCode(data.get("resetClassCode") || "DIRECT");
+      const resetEmail = String(data.get("resetEmail") || "").trim();
+      const newPassword = String(data.get("newPassword") || "").trim();
+      const confirmPassword = String(data.get("confirmPassword") || "").trim();
+      const validationError = validateResetPassword(newPassword, confirmPassword);
+      if (validationError) {
+        alert(validationError);
+        return;
+      }
+      const students = readJson(STORAGE.students, []);
+      const studentIndex = students.findIndex((student) => {
+        const sameName = String(student.name || "").trim().toLowerCase() === resetName;
+        const sameClass = normalizeLabCode(canonicalClassCode(student.classCode || "DIRECT")) === normalizeLabCode(resetClassCode);
+        return sameName && sameClass;
+      });
+      if (studentIndex === -1) {
+        alert(getText({ fr: "Aucun eleve ne correspond a ce nom et ce code classe.", ar: "لا يوجد تلميذ يطابق هذا الاسم ورمز القسم.", en: "No student matches this name and class code." }));
+        return;
+      }
+      if (!accountEmailMatches(students[studentIndex], resetEmail)) {
+        alert(getText({ fr: "L'email ne correspond pas au compte.", ar: "البريد الإلكتروني لا يطابق الحساب.", en: "The email does not match this account." }));
+        return;
+      }
+      if (students.some((student, index) => index !== studentIndex && String(student.password || "") === newPassword)) {
+        alert(getText({ fr: "Ce code est deja utilise par un autre eleve. Choisis un autre mot de passe.", ar: "هذا الرمز مستعمل من تلميذ آخر. اختر كلمة مرور أخرى.", en: "This code is already used by another student. Choose another password." }));
+        return;
+      }
+      students[studentIndex] = {
+        ...students[studentIndex],
+        password: newPassword,
+        passwordUpdatedAt: new Date().toISOString()
+      };
+      localStorage.setItem(STORAGE.students, JSON.stringify(students));
+      resetForm.reset();
+      setMode("login");
+      await showResetConfirmation(
+        { fr: "Compte eleve mis a jour", ar: "تم تحديث حساب التلميذ", en: "Student account updated" },
+        { fr: "Ton nouveau code est actif. Utilise-le dans la connexion rapide.", ar: "رمزك الجديد مفعل. استعمله في الدخول السريع.", en: "Your new code is active. Use it in quick login." }
+      );
+    });
+  }
 }
 
 function getAssistantReply(input, experimentId) {
@@ -4844,6 +5781,15 @@ function getAssistantReply(input, experimentId) {
     ar: `يمكنني التحدث معك بشكل عادي، ويمكنني أيضا مساعدتك في ${config.title.ar} والهدف والخطوات والأخطاء الشائعة والاختبار.`,
     en: `I can talk with you normally and also help you with ${config.title.en || config.title.fr}, the goal, the steps, common mistakes, or the quiz.`
   });
+}
+
+function quizTitleText(config) {
+  const experimentTitle = getText(config.title);
+  return {
+    fr: `Quiz lie a l'experience : ${experimentTitle}.`,
+    ar: `اختبار مرتبط بالتجربة: ${experimentTitle}.`,
+    en: `Quiz linked to the experiment: ${experimentTitle}.`
+  };
 }
 
  function initPage() {

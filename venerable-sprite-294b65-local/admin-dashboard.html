@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EduVirtuel - Admin</title>
+  <title>VirtuLab - تجربتي - Admin</title>
   <link rel="icon" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css?v=20260507-rank">
 </head>
@@ -11,7 +11,7 @@
   <header class="topbar"><div class="topbar-inner">
     <a class="brand" href="/index.html">
       <span class="brand-mark" aria-hidden="true"></span>
-      <span><strong>EduVirtuel</strong><small>
+      <span><strong>VirtuLab - تجربتي</strong><small>
         <span class="lang-fr">Administration de la plateforme</span>
         <span class="lang-ar">Administration de la plateforme</span>
         <span class="lang-en">Platform administration</span>
@@ -34,22 +34,30 @@
   </div></header>
 
   <main class="page-shell" style="max-width:100%;padding:14px 28px 36px;">
-    <div class="teacher-hero-strip fade-up">
+    <div class="teacher-hero-strip admin-hero-strip fade-up">
       <div class="teacher-hero-text">
-        <h1><span class="lang-fr">Dashboard admin</span><span class="lang-ar">Dashboard admin</span><span class="lang-en">Admin dashboard</span></h1>
+        <span class="admin-ai-kicker"><span class="admin-icon" aria-hidden="true">AI</span> VirtuLab Control Center</span>
+        <h1><span class="lang-fr">Dashboard admin</span><span class="lang-ar">لوحة تحكم المدير</span><span class="lang-en">Admin dashboard</span></h1>
         <p>
-          <span class="lang-fr">Ajoutez les professeurs et consultez toutes les informations de la plateforme.</span>
-          <span class="lang-ar">Ajoutez les professeurs et consultez toutes les informations de la plateforme.</span>
-          <span class="lang-en">Add professors and view all platform information.</span>
+          <span class="lang-fr">Pilotez les eleves, professeurs, classes, laboratoires virtuels et resultats depuis un espace intelligent.</span>
+          <span class="lang-ar">إدارة التلاميذ والأساتذة والأقسام والمخابر الافتراضية والنتائج من فضاء ذكي واحد.</span>
+          <span class="lang-en">Manage students, teachers, classes, virtual labs and results from one intelligent workspace.</span>
         </p>
+      </div>
+      <div class="admin-hero-orbit" aria-hidden="true">
+        <span></span><span></span><span></span>
       </div>
     </div>
 
-    <div class="teacher-stats-bar fade-up delay-1">
-      <div class="teacher-stat-card"><strong id="admin-stat-professors">0</strong><small>Professeurs</small></div>
-      <div class="teacher-stat-card"><strong id="admin-stat-students">0</strong><small>Eleves</small></div>
-      <div class="teacher-stat-card"><strong id="admin-stat-codes">0</strong><small>Codes classe</small></div>
-      <div class="teacher-stat-card"><strong id="admin-stat-experiments">0</strong><small>Experiences terminees</small></div>
+    <div class="teacher-stats-bar admin-stats-bar fade-up delay-1">
+      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">S</span><strong id="admin-stat-students">0</strong><small><span class="lang-fr">Total eleves</span><span class="lang-ar">مجموع التلاميذ</span><span class="lang-en">Total students</span></small></div>
+      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">T</span><strong id="admin-stat-professors">0</strong><small><span class="lang-fr">Total professeurs</span><span class="lang-ar">مجموع الأساتذة</span><span class="lang-en">Total teachers</span></small></div>
+      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">L</span><strong id="admin-stat-labs">0</strong><small><span class="lang-fr">Labs virtuels</span><span class="lang-ar">مخابر افتراضية</span><span class="lang-en">Virtual labs</span></small></div>
+      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">Q</span><strong id="admin-stat-quizzes">0</strong><small><span class="lang-fr">Quiz termines</span><span class="lang-ar">اختبارات منجزة</span><span class="lang-en">Quizzes completed</span></small></div>
+      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">%</span><strong id="admin-stat-success">0%</strong><small><span class="lang-fr">Taux de reussite moyen</span><span class="lang-ar">معدل النجاح</span><span class="lang-en">Average success rate</span></small></div>
+      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">C</span><strong id="admin-stat-codes">0</strong><small><span class="lang-fr">Codes classe</span><span class="lang-ar">رموز الأقسام</span><span class="lang-en">Class codes</span></small></div>
+      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">E</span><strong id="admin-stat-experiments">0</strong><small><span class="lang-fr">Experiences terminees</span><span class="lang-ar">تجارب منجزة</span><span class="lang-en">Completed experiments</span></small></div>
+      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">A</span><strong id="admin-stat-active">0</strong><small><span class="lang-fr">Activites recentes</span><span class="lang-ar">نشاطات حديثة</span><span class="lang-en">Recent activity</span></small></div>
     </div>
 
     <section class="admin-dashboard-grid fade-up delay-2">
@@ -71,24 +79,39 @@
 
       <article class="panel-card admin-panel-professors">
         <div class="panel-head">
-          <h2>Professeurs</h2>
-          <p>Comptes autorises a utiliser le dashboard enseignant.</p>
+          <h2><span class="lang-fr">Gestion des professeurs</span><span class="lang-ar">إدارة الأساتذة</span><span class="lang-en">Teacher management</span></h2>
+          <p><span class="lang-fr">Comptes autorises a utiliser le dashboard enseignant.</span><span class="lang-ar">حسابات مسموح لها باستعمال لوحة الأستاذ.</span><span class="lang-en">Accounts allowed to use the teacher dashboard.</span></p>
+        </div>
+        <div class="admin-tools">
+          <label class="admin-search"><span class="admin-tool-icon" aria-hidden="true">⌕</span><input type="search" data-admin-search="admin-professor-list" data-placeholder-fr="Rechercher professeur, matiere, code..." data-placeholder-ar="ابحث عن أستاذ أو مادة أو رمز..." data-placeholder-en="Search teacher, subject, code..."></label>
         </div>
         <div id="admin-professor-list" class="admin-list"></div>
       </article>
 
       <article class="panel-card">
         <div class="panel-head">
-          <h2>Classes et codes</h2>
-          <p>Chaque code avec son professeur et les etudiants lies.</p>
+          <h2><span class="lang-fr">Gestion des codes classe</span><span class="lang-ar">إدارة رموز الأقسام</span><span class="lang-en">Class code management</span></h2>
+          <p><span class="lang-fr">Chaque code avec son professeur et les etudiants lies.</span><span class="lang-ar">كل رمز مع الأستاذ والتلاميذ المرتبطين به.</span><span class="lang-en">Each code with its teacher and linked students.</span></p>
+        </div>
+        <div class="admin-tools">
+          <label class="admin-search"><span class="admin-tool-icon" aria-hidden="true">⌕</span><input type="search" data-admin-search="admin-class-list" data-placeholder-fr="Filtrer par code, niveau, professeur..." data-placeholder-ar="تصفية حسب الرمز أو المستوى أو الأستاذ..." data-placeholder-en="Filter by code, level, teacher..."></label>
         </div>
         <div id="admin-class-list" class="admin-list"></div>
       </article>
 
       <article class="panel-card">
         <div class="panel-head">
-          <h2>Tous les etudiants</h2>
-          <p>Les visiteurs sans code apparaissent dans DIRECT. Chaque etudiant affiche son niveau, sa classe et son rang.</p>
+          <h2><span class="lang-fr">Gestion des eleves</span><span class="lang-ar">إدارة التلاميذ</span><span class="lang-en">Student management</span></h2>
+          <p><span class="lang-fr">Les visiteurs sans code apparaissent dans DIRECT. Chaque etudiant affiche son niveau, sa classe et son rang.</span><span class="lang-ar">الزوار بدون رمز يظهرون في DIRECT. كل تلميذ يعرض المستوى والقسم والترتيب.</span><span class="lang-en">Visitors without a code appear in DIRECT. Each student shows level, class and rank.</span></p>
+        </div>
+        <div class="admin-tools admin-tools-split">
+          <label class="admin-search"><span class="admin-tool-icon" aria-hidden="true">⌕</span><input type="search" data-admin-search="admin-student-list" data-placeholder-fr="Rechercher eleve, code, niveau..." data-placeholder-ar="ابحث عن تلميذ أو رمز أو مستوى..." data-placeholder-en="Search student, code, level..."></label>
+          <select id="admin-student-level-filter" class="admin-filter">
+            <option value="all">Tous niveaux</option>
+            <option value="primaire">Primaire</option>
+            <option value="cem">CEM</option>
+            <option value="lycee">Lycee</option>
+          </select>
         </div>
         <div id="admin-student-list" class="admin-list"></div>
       </article>
@@ -101,10 +124,45 @@
         <div id="admin-rank-list" class="admin-list"></div>
       </article>
 
+      <article class="panel-card">
+        <div class="panel-head">
+          <h2><span class="lang-fr">Gestion des laboratoires</span><span class="lang-ar">إدارة المخابر</span><span class="lang-en">Lab management</span></h2>
+          <p><span class="lang-fr">Vue rapide des laboratoires virtuels, niveaux et quiz disponibles.</span><span class="lang-ar">نظرة سريعة على المخابر الافتراضية والمستويات والاختبارات المتاحة.</span><span class="lang-en">Quick view of virtual labs, levels and available quizzes.</span></p>
+        </div>
+        <div class="admin-tools">
+          <label class="admin-search"><span class="admin-tool-icon" aria-hidden="true">⌕</span><input type="search" data-admin-search="admin-lab-list" data-placeholder-fr="Rechercher lab, matiere, niveau..." data-placeholder-ar="ابحث عن مخبر أو مادة أو مستوى..." data-placeholder-en="Search lab, subject, level..."></label>
+        </div>
+        <div id="admin-lab-list" class="admin-list"></div>
+      </article>
+
+      <article class="panel-card">
+        <div class="panel-head">
+          <h2><span class="lang-fr">Langues de la plateforme</span><span class="lang-ar">لغات المنصة</span><span class="lang-en">Platform languages</span></h2>
+          <p><span class="lang-fr">Support de gestion multilingue pour l'administration et les espaces eleves.</span><span class="lang-ar">دعم متعدد اللغات للإدارة وفضاءات التلاميذ.</span><span class="lang-en">Multilingual management support for admin and student spaces.</span></p>
+        </div>
+        <div id="admin-language-list" class="admin-list"></div>
+      </article>
+
       <article class="panel-card admin-panel-wide">
         <div class="panel-head">
-          <h2>Activite et historique</h2>
-          <p>Scores de laboratoire et de quiz conserves pour consultation future.</p>
+          <h2><span class="lang-fr">Activite recente</span><span class="lang-ar">النشاط الحديث</span><span class="lang-en">Recent activity</span></h2>
+          <p><span class="lang-fr">Derniers resultats de laboratoire et quiz.</span><span class="lang-ar">آخر نتائج المخابر والاختبارات.</span><span class="lang-en">Latest lab and quiz results.</span></p>
+        </div>
+        <div id="admin-recent-activity-list" class="admin-list admin-activity-timeline"></div>
+      </article>
+
+      <article class="panel-card admin-panel-wide">
+        <div class="panel-head">
+          <h2><span class="lang-fr">Historique d'activite</span><span class="lang-ar">سجل النشاط</span><span class="lang-en">Activity history</span></h2>
+          <p><span class="lang-fr">Scores de laboratoire et de quiz conserves pour consultation future.</span><span class="lang-ar">نتائج المخابر والاختبارات محفوظة للمراجعة لاحقا.</span><span class="lang-en">Lab and quiz scores saved for future review.</span></p>
+        </div>
+        <div class="admin-tools admin-tools-split">
+          <label class="admin-search"><span class="admin-tool-icon" aria-hidden="true">⌕</span><input type="search" data-admin-search="admin-activity-list" data-placeholder-fr="Rechercher dans l'historique..." data-placeholder-ar="ابحث في السجل..." data-placeholder-en="Search activity history..."></label>
+          <select id="admin-activity-type-filter" class="admin-filter">
+            <option value="all">Tous resultats</option>
+            <option value="success">Reussite >= 60%</option>
+            <option value="needs-work">A renforcer</option>
+          </select>
         </div>
         <div id="admin-activity-list" class="admin-list"></div>
       </article>
@@ -112,6 +170,6 @@
   </main>
 
   <div id="assistant-root"></div>
-  <script defer src="/script.js?v=20260507-rank"></script>
+  <script defer src="/script.js?v=20260512-utf8-global"></script>
 </body>
 </html>

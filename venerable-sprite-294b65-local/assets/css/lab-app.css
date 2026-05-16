@@ -117,25 +117,47 @@ button:disabled {
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: center;
+  gap: 12px;
+  text-decoration: none;
+  border-radius: 18px;
+  padding: 4px 8px 4px 4px;
+  transition: transform 0.22s ease, filter 0.22s ease, background 0.22s ease;
 }
 
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, var(--primary) 0%, #1f8d7b 100%);
+  width: 48px;
+  height: 48px;
+  border-radius: 0;
+  background: url("/assets/brand/virtulab-icon.svg") center / contain no-repeat;
   color: #fff;
   font-family: 'Cairo', sans-serif;
   font-weight: 800;
+  font-size: 0;
+  filter: drop-shadow(0 8px 16px rgba(18, 207, 230, 0.18));
+  transition: transform 0.22s ease, filter 0.22s ease;
+}
+
+.brand:hover,
+.brand:focus-visible {
+  background: rgba(18, 207, 230, 0.08);
+  transform: translateY(-1px);
+  filter: drop-shadow(0 10px 24px rgba(18, 207, 230, 0.16));
+}
+
+.brand:hover .brand-mark,
+.brand:focus-visible .brand-mark {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 18px rgba(18, 207, 230, 0.52));
 }
 
 .brand strong {
   display: block;
   font-family: 'Cairo', sans-serif;
   font-size: 20px;
+  line-height: 1.05;
 }
 
 .brand small {

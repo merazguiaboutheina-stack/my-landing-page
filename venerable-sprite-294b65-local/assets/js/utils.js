@@ -38,7 +38,7 @@ function timeAgo(iso) {
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 const SEED_DATA = {
-  professor: { username: 'professor', password: '123456', displayName: 'الأستاذ' },
+  professor: { username: 'admin', password: '1234', displayName: 'Admin' },
   labs: [
     {
       id: uuid(),

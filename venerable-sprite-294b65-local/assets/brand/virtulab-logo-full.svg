@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 190" role="img" aria-labelledby="title desc">
+  <title id="title">VirtuLab - تجربتي full logo</title>
+  <desc id="desc">Full scalable SVG logo for an AI science education virtual laboratory platform.</desc>
+  <defs>
+    <linearGradient id="word" x1="186" y1="46" x2="640" y2="126" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0d1b4c"/>
+      <stop offset=".5" stop-color="#126fe4"/>
+      <stop offset="1" stop-color="#8b5cff"/>
+    </linearGradient>
+    <linearGradient id="line" x1="188" y1="146" x2="552" y2="146" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1378e8"/>
+      <stop offset=".55" stop-color="#20d6d0"/>
+      <stop offset="1" stop-color="#9d7cff"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-25%" width="130%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#082d67" flood-opacity=".16"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <svg x="22" y="26" width="138" height="138" viewBox="0 0 128 128">
+      <defs>
+        <linearGradient id="bg" x1="18" y1="14" x2="110" y2="116" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#101a55"/>
+          <stop offset=".5" stop-color="#1378e8"/>
+          <stop offset="1" stop-color="#20d6d0"/>
+        </linearGradient>
+        <linearGradient id="accent" x1="35" y1="28" x2="94" y2="103" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#ffffff"/>
+          <stop offset=".45" stop-color="#9df7ff"/>
+          <stop offset="1" stop-color="#9d7cff"/>
+        </linearGradient>
+        <linearGradient id="liquid" x1="44" y1="76" x2="89" y2="102" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#20f0de"/>
+          <stop offset="1" stop-color="#8b5cff"/>
+        </linearGradient>
+      </defs>
+      <path d="M64 8 112 36v56l-48 28-48-28V36L64 8Z" fill="url(#bg)"/>
+      <path d="M64 18 102 40v48l-38 22-38-22V40l38-22Z" fill="none" stroke="#b9fbff" stroke-width="2" opacity=".32"/>
+      <g fill="none" stroke="url(#accent)" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M49 32h30" stroke-width="7"/>
+        <path d="M55 36v18L38 86c-3 6 1 12 8 12h36c7 0 11-6 8-12L73 54V36" stroke-width="7"/>
+        <path d="M45 81c8-5 16 4 25 0 7-3 13-2 18 2" stroke-width="6"/>
+      </g>
+      <path d="M46 82c8-5 15 4 24 0 7-3 13-2 18 2l7 14H34l12-16Z" fill="url(#liquid)" opacity=".7"/>
+      <g fill="none" stroke="#c7fbff" stroke-linecap="round" stroke-width="3.8">
+        <ellipse cx="66" cy="61" rx="35" ry="12" transform="rotate(-20 66 61)"/>
+        <path d="M35 69c13 8 40 10 58 1" opacity=".55"/>
+      </g>
+      <circle cx="66" cy="61" r="5.5" fill="#ffffff"/>
+      <circle cx="97" cy="50" r="4.5" fill="#20f0de"/>
+      <g fill="none" stroke="#e9ffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.8">
+        <path d="M64 54V42"/>
+        <path d="M64 54h18l9-9"/>
+        <path d="M64 54H47l-8-8"/>
+      </g>
+      <g fill="#f7ffff">
+        <circle cx="64" cy="54" r="4.8"/>
+        <circle cx="92" cy="44" r="4.8"/>
+        <circle cx="38" cy="45" r="4.8"/>
+      </g>
+    </svg>
+  </g>
+
+  <text x="188" y="86" fill="url(#word)" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="55" font-weight="850" letter-spacing="-.8">VirtuLab</text>
+  <text x="438" y="86" fill="#126fe4" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="800">- تجربتي</text>
+  <text x="190" y="122" fill="#526b86" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="750" letter-spacing=".7">AI PHYSICS + CHEMISTRY VIRTUAL LAB</text>
+  <path d="M190 146h312" stroke="url(#line)" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="527" cy="146" r="5" fill="#20d6d0"/>
+</svg>

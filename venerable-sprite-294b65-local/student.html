@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EduVirtuel - Eleve</title>
+  <title>VirtuLab - تجربتي - Eleve</title>
   <link rel="icon" href="favicon.svg">
   <link rel="stylesheet" href="style.css?v=20260504-quiz-ui">
 </head>
@@ -13,7 +13,7 @@
       <a class="brand" href="index.html">
         <span class="brand-mark" aria-hidden="true"></span>
         <span>
-          <strong>EduVirtuel</strong>
+          <strong>VirtuLab - تجربتي</strong>
           <small>
             <span class="lang-fr">Portail Education Virtuel</span>
             <span class="lang-ar">بوابة التعليم الافتراضي</span>
@@ -47,7 +47,7 @@
     <div class="student-intro-row fade-up">
       <div class="student-mascot-sm" aria-hidden="true">🧑‍🎓</div>
       <div class="student-intro-copy">
-        <span class="eyebrow">EduVirtuel</span>
+        <span class="eyebrow">VirtuLab - تجربتي</span>
         <h1>
           <span class="lang-fr">Espace eleve</span>
           <span class="lang-ar">فضاء التلميذ</span>
@@ -123,9 +123,9 @@
             <span class="lang-en"><strong>Note:</strong> choose your level before creating the code. Save the generated code because you will use it to log in later.</span>
           </p>
           <p class="form-note">
-            <span class="lang-fr">Quand tu valides, EduVirtuel cree automatiquement ton mot de passe personnel pour la prochaine connexion.</span>
-            <span class="lang-ar">عند التأكيد، ينشئ EduVirtuel كلمة مرورك الشخصية تلقائيا من أجل الدخول في المرة القادمة.</span>
-            <span class="lang-en">When you continue, EduVirtuel automatically creates your personal password code for the next login.</span>
+            <span class="lang-fr">Quand tu valides, VirtuLab - تجربتي cree automatiquement ton mot de passe personnel pour la prochaine connexion.</span>
+            <span class="lang-ar">عند التأكيد، ينشئ VirtuLab - تجربتي كلمة مرورك الشخصية تلقائيا من أجل الدخول في المرة القادمة.</span>
+            <span class="lang-en">When you continue, VirtuLab - تجربتي automatically creates your personal password code for the next login.</span>
           </p>
           <button class="primary-btn student-continue-btn" type="submit">
             <span aria-hidden="true">🚀</span>
@@ -223,6 +223,78 @@
             <span class="lang-ar">دخول</span>
             <span class="lang-en">Enter</span>
           </button>
+          <button class="forgot-password-btn" type="button" data-student-forgot>
+            <span class="lang-fr">Mot de passe oublie ?</span>
+            <span class="lang-ar">هل نسيت كلمة المرور؟</span>
+            <span class="lang-en">Forgot password?</span>
+          </button>
+        </form>
+
+        <form id="student-reset-form" class="stack-form student-auth-form reset-form-card" data-auth-panel="reset" hidden>
+          <div class="panel-head">
+            <h2>
+              <span class="lang-fr">Reinitialiser le mot de passe</span>
+              <span class="lang-ar">إعادة تعيين كلمة المرور</span>
+              <span class="lang-en">Reset password</span>
+            </h2>
+            <p>
+              <span class="lang-fr">Confirme ton nom et ton code classe, puis choisis un nouveau code.</span>
+              <span class="lang-ar">أكد اسمك ورمز القسم ثم اختر رمزا جديدا.</span>
+              <span class="lang-en">Confirm your name and class code, then choose a new code.</span>
+            </p>
+          </div>
+          <label class="icon-field">
+            <span class="lang-fr">Nom complet</span>
+            <span class="lang-ar">الاسم الكامل</span>
+            <span class="lang-en">Full name</span>
+            <span class="input-icon" aria-hidden="true">ID</span>
+            <input type="text" name="resetName" required data-placeholder-fr="Exemple : Ahmed Benali" data-placeholder-ar="مثال: أحمد بن علي" data-placeholder-en="Example: Ahmed Benali">
+          </label>
+          <label class="icon-field">
+            <span class="lang-fr">Code classe</span>
+            <span class="lang-ar">رمز القسم</span>
+            <span class="lang-en">Class code</span>
+            <span class="input-icon" aria-hidden="true">#</span>
+            <input type="text" name="resetClassCode" data-placeholder-fr="DIRECT ou CEM2026" data-placeholder-ar="DIRECT أو CEM2026" data-placeholder-en="DIRECT or CEM2026">
+          </label>
+          <label class="icon-field">
+            <span class="lang-fr">Email (optionnel)</span>
+            <span class="lang-ar">البريد الإلكتروني (اختياري)</span>
+            <span class="lang-en">Email (optional)</span>
+            <span class="input-icon" aria-hidden="true">@</span>
+            <input type="email" name="resetEmail" data-placeholder-fr="Si ton compte contient un email" data-placeholder-ar="إذا كان حسابك يحتوي على بريد" data-placeholder-en="If your account has an email">
+          </label>
+          <div class="student-form-grid">
+            <label class="icon-field">
+              <span class="lang-fr">Nouveau mot de passe</span>
+              <span class="lang-ar">كلمة المرور الجديدة</span>
+              <span class="lang-en">New password</span>
+              <span class="input-icon" aria-hidden="true">+</span>
+              <input type="password" name="newPassword" required minlength="6" data-placeholder-fr="Au moins 6 caracteres" data-placeholder-ar="6 أحرف على الأقل" data-placeholder-en="At least 6 characters">
+            </label>
+            <label class="icon-field">
+              <span class="lang-fr">Confirmation</span>
+              <span class="lang-ar">التأكيد</span>
+              <span class="lang-en">Confirm</span>
+              <span class="input-icon" aria-hidden="true">OK</span>
+              <input type="password" name="confirmPassword" required minlength="6" data-placeholder-fr="Repete le nouveau code" data-placeholder-ar="أعد كتابة الرمز الجديد" data-placeholder-en="Repeat the new code">
+            </label>
+          </div>
+          <p class="form-note">
+            <span class="lang-fr">Validation : le nom et le code classe doivent correspondre au compte existant. DIRECT est accepte pour les eleves sans code.</span>
+            <span class="lang-ar">التحقق: يجب أن يطابق الاسم ورمز القسم الحساب الموجود. DIRECT مقبول للتلاميذ بدون رمز.</span>
+            <span class="lang-en">Validation: name and class code must match the existing account. DIRECT works for students without a code.</span>
+          </p>
+          <button class="primary-btn student-continue-btn" type="submit">
+            <span class="lang-fr">Reinitialiser</span>
+            <span class="lang-ar">إعادة التعيين</span>
+            <span class="lang-en">Reset</span>
+          </button>
+          <button class="forgot-password-btn" type="button" data-student-back-login>
+            <span class="lang-fr">Retour a la connexion</span>
+            <span class="lang-ar">العودة إلى الدخول</span>
+            <span class="lang-en">Back to login</span>
+          </button>
         </form>
       </section>
 
@@ -261,6 +333,6 @@
   </main>
 
   <div id="assistant-root"></div>
-  <script defer src="script.js?v=20260504-quiz-ui"></script>
+  <script defer src="script.js?v=20260512-utf8-global"></script>
 </body>
 </html>

@@ -12,8 +12,12 @@ from urllib.parse import urlparse
 
 
 EXTRA_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".htm": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
     ".wasm": "application/wasm",
     ".js": "application/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
     ".data": "application/octet-stream",
 }
 
@@ -24,7 +28,7 @@ GZIP_TYPES = {
     ".json": "application/json; charset=utf-8",
 }
 
-SYSTEM_PROMPT = """You are EduVirtuel, a warm educational assistant for Algerian students.
+SYSTEM_PROMPT = """You are VirtuLab - تجربتي, a warm educational assistant for Algerian students.
 Your role is to help with school science and mathematics, especially physics, electricity, chemistry, biology, and lab activities.
 
 Rules:
@@ -44,6 +48,30 @@ GEMINI_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "gemini-2.0-flash:generateContent"
 )
+
+def repair_mojibake_text(value: str) -> str:
+    text = str(value or "")
+    if not any(marker in text for marker in ("Ã", "Â", "Ø", "Ù")):
+        return text
+    for _ in range(2):
+        try:
+            decoded = text.encode("latin-1").decode("utf-8")
+        except UnicodeError:
+            break
+        if decoded == text:
+            break
+        text = decoded
+    return text
+
+
+def repair_payload(value):
+    if isinstance(value, str):
+        return repair_mojibake_text(value)
+    if isinstance(value, list):
+        return [repair_payload(item) for item in value]
+    if isinstance(value, dict):
+        return {key: repair_payload(item) for key, item in value.items()}
+    return value
 
 
 def load_dotenv(root: Path) -> None:
@@ -183,7 +211,7 @@ def gemini_chat(message: str, history, lab_name: str) -> str:
     req = request.Request(
         f"{GEMINI_ENDPOINT}?key={api_key}",
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json; charset=utf-8"},
         method="POST",
     )
 
@@ -204,7 +232,7 @@ def gemini_chat(message: str, history, lab_name: str) -> str:
 
 
 class UnityFriendlyHandler(SimpleHTTPRequestHandler):
-    server_version = "EduVirtuelLocal/1.0"
+    server_version = "VirtuLabTajribatiLocal/1.0"
     CLEAN_ROUTES = {
         "/admin": "/admin-dashboard.html",
         "/admin/": "/admin-dashboard.html",
@@ -271,7 +299,7 @@ class UnityFriendlyHandler(SimpleHTTPRequestHandler):
 
         message = payload.get("message", "")
         history = payload.get("history", [])
-        lab_name = str(payload.get("labName", "EduVirtuel")).strip() or "EduVirtuel"
+        lab_name = str(payload.get("labName", "VirtuLab - تجربتي")).strip() or "VirtuLab - تجربتي"
         if not isinstance(message, str) or not message.strip():
             self._send_json(400, {"error": "Message is required."})
             return
@@ -285,7 +313,7 @@ class UnityFriendlyHandler(SimpleHTTPRequestHandler):
         self._send_json(200, {"reply": reply})
 
     def _send_json(self, status: int, payload) -> None:
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        body = json.dumps(repair_payload(payload), ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
