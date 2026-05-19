@@ -4621,8 +4621,14 @@ function currentTeacherManagedCodes() {
   const ownedCodes = labCodes
     .filter((code) => String(code.ownerTeacher || "").trim().toLowerCase() === current)
     .map((code) => normalizeLabCode(code.code || "DIRECT") || "DIRECT");
-  const legacyUnownedCodes = labCodes
-    .filter((code) => getAssignmentType(code) === "promo" && !String(code.ownerTeacher || "").trim())
+  const profileManagedLegacyCodes = labCodes
+    .filter((code) => {
+      if (getAssignmentType(code) !== "promo") return false;
+      const owner = String(code.ownerTeacher || "").trim().toLowerCase();
+      if (owner) return false;
+      const normalizedCode = normalizeLabCode(code.code || "DIRECT") || "DIRECT";
+      return profileCodes.includes(normalizedCode);
+    })
     .map((code) => normalizeLabCode(code.code || "DIRECT") || "DIRECT");
   const linkedResultCodes = readResultHistory()
     .map((item) => normalizeLabCode(item.classCode || ""))
@@ -4631,7 +4637,8 @@ function currentTeacherManagedCodes() {
       const assignment = findLabCodeAssignment(code);
       if (!assignment) return profileCodes.includes(code);
       const owner = String(assignment.ownerTeacher || "").trim().toLowerCase();
-      return !owner || owner === current;
+      if (owner) return owner === current;
+      return profileCodes.includes(code);
     });
   const linkedStudentCodes = readJson(STORAGE.students, [])
     .flatMap((student) => [student.classCode, student.activeCode])
@@ -4641,9 +4648,10 @@ function currentTeacherManagedCodes() {
       const assignment = findLabCodeAssignment(code);
       if (!assignment) return profileCodes.includes(code);
       const owner = String(assignment.ownerTeacher || "").trim().toLowerCase();
-      return !owner || owner === current;
+      if (owner) return owner === current;
+      return profileCodes.includes(code);
     });
-  return [...new Set([...profileCodes, ...ownedCodes, ...legacyUnownedCodes, ...linkedResultCodes, ...linkedStudentCodes])];
+  return [...new Set([...profileCodes, ...ownedCodes, ...profileManagedLegacyCodes, ...linkedResultCodes, ...linkedStudentCodes])];
 }
 
 function canTeacherManageStudent(student) {

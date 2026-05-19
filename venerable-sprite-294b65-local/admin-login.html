@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VirtuLab - تجربتي - Connexion admin securisee</title>
+  <link rel="icon" href="favicon.svg">
+  <link rel="stylesheet" href="style.css?v=20260507-rank">
+</head>
+<body data-page="admin-login" data-lang="fr" class="teacher-page admin-page">
+  <header class="topbar"><div class="topbar-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span><strong>VirtuLab - تجربتي</strong><small>
+        <span class="lang-fr">Acces admin securise</span>
+        <span class="lang-ar">Acces admin securise</span>
+        <span class="lang-en">Secure admin access</span>
+      </small></span>
+    </a>
+    <div class="topbar-nav">
+      <div class="lang-switch" aria-label="Language">
+        <button type="button" class="lang-btn" data-lang="fr">FR</button>
+        <button type="button" class="lang-btn" data-lang="ar">AR</button>
+        <button type="button" class="lang-btn" data-lang="en">EN</button>
+      </div>
+    </div>
+  </div></header>
+
+  <main class="page-shell narrow-shell">
+    <article class="form-card admin-login-card secure-admin-login-card">
+      <div class="panel-head">
+        <span class="admin-ai-kicker"><span class="admin-icon" aria-hidden="true">SEC</span> Control Center</span>
+        <h1>
+          <span class="lang-fr">Connexion admin securisee</span>
+          <span class="lang-ar">Connexion admin securisee</span>
+          <span class="lang-en">Secure admin login</span>
+        </h1>
+        <p>
+          <span class="lang-fr">Route privee reservee aux comptes administrateurs autorises.</span>
+          <span class="lang-ar">Route privee reservee aux comptes administrateurs autorises.</span>
+          <span class="lang-en">Private route reserved for authorized administrator accounts.</span>
+        </p>
+      </div>
+      <div class="auth-alert" data-auth-alert hidden>
+        <span class="lang-fr">Acc&egrave;s refus&eacute; &ndash; authentification requise</span>
+        <span class="lang-ar">Acc&egrave;s refus&eacute; &ndash; authentification requise</span>
+        <span class="lang-en">Access denied - authentication required</span>
+      </div>
+      <form id="admin-login-form" class="stack-form">
+        <label class="icon-field">
+          <span class="lang-fr">Identifiant admin</span>
+          <span class="lang-ar">Identifiant admin</span>
+          <span class="lang-en">Admin username</span>
+          <span class="input-icon" aria-hidden="true">&#x1F464;</span>
+          <input name="username" type="text" required autocomplete="username" data-placeholder-fr="Identifiant" data-placeholder-ar="Identifiant" data-placeholder-en="Username">
+        </label>
+        <label class="icon-field">
+          <span class="lang-fr">Mot de passe</span>
+          <span class="lang-ar">Mot de passe</span>
+          <span class="lang-en">Password</span>
+          <span class="input-icon" aria-hidden="true">&#x1F512;</span>
+          <input name="password" type="password" required autocomplete="current-password" data-placeholder-fr="Mot de passe" data-placeholder-ar="Mot de passe" data-placeholder-en="Password">
+        </label>
+        <button class="primary-btn" type="submit" style="width:100%;">
+          <span class="lang-fr">Ouvrir le control center</span>
+          <span class="lang-ar">Ouvrir le control center</span>
+          <span class="lang-en">Open control center</span>
+        </button>
+        <button class="forgot-password-btn" type="button" data-admin-forgot>
+          <span class="lang-fr">Mot de passe oublie ?</span>
+          <span class="lang-ar">Mot de passe oublie ?</span>
+          <span class="lang-en">Forgot password?</span>
+        </button>
+        <p class="form-note" style="text-align:center;">
+          <span class="lang-fr">Aucun acces enseignant n'est accepte ici.</span>
+          <span class="lang-ar">Aucun acces enseignant n'est accepte ici.</span>
+          <span class="lang-en">Teacher access is not accepted here.</span>
+        </p>
+      </form>
+    </article>
+  </main>
+
+  <div id="admin-reset-modal" class="secure-reset-modal" hidden>
+    <div class="secure-reset-backdrop" data-admin-reset-close></div>
+    <form id="admin-reset-form" class="stack-form reset-form-card secure-reset-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-reset-title">
+      <button type="button" class="secure-reset-close" data-admin-reset-close aria-label="Fermer">&times;</button>
+      <div class="panel-head">
+        <h2 id="admin-reset-title">
+          <span class="lang-fr">Validation admin securisee</span>
+          <span class="lang-ar">Validation admin securisee</span>
+          <span class="lang-en">Secure admin validation</span>
+        </h2>
+        <p>
+          <span class="lang-fr">Une confirmation simulee est exigee avant toute recuperation admin.</span>
+          <span class="lang-ar">Une confirmation simulee est exigee avant toute recuperation admin.</span>
+          <span class="lang-en">A simulated confirmation is required before admin recovery.</span>
+        </p>
+      </div>
+      <label class="icon-field">
+        <span class="lang-fr">Email admin</span>
+        <span class="lang-ar">Email admin</span>
+        <span class="lang-en">Admin email</span>
+        <span class="input-icon" aria-hidden="true">@</span>
+        <input type="email" name="adminEmail" required data-placeholder-fr="admin@virtulab.local" data-placeholder-ar="admin@virtulab.local" data-placeholder-en="admin@virtulab.local">
+      </label>
+      <label class="icon-field">
+        <span class="lang-fr">Code de verification</span>
+        <span class="lang-ar">Code de verification</span>
+        <span class="lang-en">Verification code</span>
+        <span class="input-icon" aria-hidden="true">VC</span>
+        <input type="text" name="adminVerificationCode" required data-placeholder-fr="ADMIN-2026" data-placeholder-ar="ADMIN-2026" data-placeholder-en="ADMIN-2026">
+      </label>
+      <label class="icon-field">
+        <span class="lang-fr">Question secrete : espace protege ?</span>
+        <span class="lang-ar">Question secrete : espace protege ?</span>
+        <span class="lang-en">Secret question: protected space?</span>
+        <span class="input-icon" aria-hidden="true">?</span>
+        <input type="text" name="adminSecretAnswer" required data-placeholder-fr="administration" data-placeholder-ar="administration" data-placeholder-en="administration">
+      </label>
+      <button class="primary-btn" type="submit" style="width:100%;margin-top:4px;">
+        <span class="lang-fr">Demander la confirmation</span>
+        <span class="lang-ar">Demander la confirmation</span>
+        <span class="lang-en">Request confirmation</span>
+      </button>
+    </form>
+  </div>
+
+  <div id="assistant-root"></div>
+  <script defer src="script.js?v=20260512-utf8-global"></script>
+</body>
+</html>
