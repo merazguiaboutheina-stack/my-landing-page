@@ -13,6 +13,7 @@ const STORAGE = {
   adminLogged: "virtulabAdminLogged",
   currentTeacher: "virtulabCurrentTeacher",
   professors: "virtulabProfessors",
+  teacherRequests: "virtulabTeacherSignupRequests",
   labCodes: "virtulabLabCodes",
   activeLabCode: "virtulabActiveLabCode",
   students: "virtulabStudents"
@@ -478,7 +479,7 @@ function scoreToBadge(score) {
 function clearSession() {
   const language = currentLanguage();
   Object.values(STORAGE).forEach((key) => {
-    const persistentKeys = new Set([STORAGE.language, STORAGE.labCodes, STORAGE.students, STORAGE.professors, STORAGE.resultHistory, STORAGE.quizScores, STORAGE.experimentScores]);
+    const persistentKeys = new Set([STORAGE.language, STORAGE.labCodes, STORAGE.students, STORAGE.professors, STORAGE.teacherRequests, STORAGE.resultHistory, STORAGE.quizScores, STORAGE.experimentScores]);
     if (!persistentKeys.has(key)) localStorage.removeItem(key);
   });
   localStorage.setItem(STORAGE.language, language);
@@ -612,6 +613,15 @@ function readProfessors() {
 
 function writeProfessors(professors) {
   writeJson(STORAGE.professors, professors);
+}
+
+function readTeacherRequests() {
+  const requests = readJson(STORAGE.teacherRequests, []);
+  return Array.isArray(requests) ? requests : [];
+}
+
+function writeTeacherRequests(requests) {
+  writeJson(STORAGE.teacherRequests, requests);
 }
 
 function readResultHistory() {
@@ -3791,11 +3801,6 @@ function renderRegisteredStudents() {
           <p>${escapeHtml(classCode)}</p>
           <p>${escapeHtml(linkedLabel)}</p>
           <div class="registered-student-secret">
-            <code>${escapeHtml(student.password || "-")}</code>
-            <button type="button" class="secondary-btn registered-student-copy" data-copy-student-password="${escapeHtml(student.password || "")}">
-              <span aria-hidden="true">📋</span>
-              <span>${getText({ fr: "Copier", ar: "نسخ", en: "Copy" })}</span>
-            </button>
             <button type="button" class="secondary-btn danger-soft-btn registered-student-unlink" data-unlink-student="${escapeHtml(String(index))}">
               <span>${getText({ fr: "Retirer de ma classe", ar: "إزالة من قسمي", en: "Unlink from class" })}</span>
             </button>
@@ -3803,21 +3808,6 @@ function renderRegisteredStudents() {
         </article>
       `;
     }).join("");
-
-  target.querySelectorAll("[data-copy-student-password]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const secret = button.dataset.copyStudentPassword || "";
-      if (!secret) return;
-      const copied = await copyTextValue(secret).catch(() => false);
-      button.querySelector("span:last-child").textContent = copied
-        ? getText({ fr: "Copie", ar: "تم النسخ", en: "Copied" })
-        : getText({ fr: "Erreur", ar: "خطأ", en: "Error" });
-      window.setTimeout(() => {
-        const label = button.querySelector("span:last-child");
-        if (label) label.textContent = getText({ fr: "Copier", ar: "نسخ", en: "Copy" });
-      }, 1400);
-    });
-  });
   target.querySelectorAll("[data-unlink-student]").forEach((button) => {
     button.addEventListener("click", () => unlinkStudentFromTeacherClass(Number(button.dataset.unlinkStudent)));
   });
@@ -4381,17 +4371,8 @@ function renderQuizResult(state, config, options = {}) {
 
 function initTeacherLogin() {
   const form = document.getElementById("teacher-login-form");
-  const resetForm = document.getElementById("teacher-reset-form");
-  if (!form) return;
-  const forgotButton = document.querySelector("[data-teacher-forgot]");
-  const backButton = document.querySelector("[data-teacher-back-login]");
-  const setTeacherResetMode = (isReset) => {
-    form.hidden = isReset;
-    if (resetForm) resetForm.hidden = !isReset;
-  };
-  if (forgotButton) forgotButton.addEventListener("click", () => setTeacherResetMode(true));
-  if (backButton) backButton.addEventListener("click", () => setTeacherResetMode(false));
-  form.addEventListener("submit", (event) => {
+  const requestForm = document.getElementById("teacher-request-form");
+  if (form) form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(form);
     const username = String(data.get("username") || "").trim();
@@ -4403,13 +4384,35 @@ function initTeacherLogin() {
       window.location.href = "/admin";
       return;
     }
-    const professor = readProfessors().find((item) => String(item.username || "").trim() === username && String(item.password || "") === password);
-    if (professor) {
-      localStorage.setItem(STORAGE.teacherLogged, "true");
-      localStorage.removeItem(STORAGE.adminLogged);
-      localStorage.setItem(STORAGE.currentTeacher, professor.name || professor.username);
-      window.location.href = "prof-dashboard.html";
-      return;
+    const professors = readProfessors();
+    const professorIndex = professors.findIndex((item) => String(item.username || "").trim() === username);
+    if (professorIndex >= 0) {
+      const professor = { ...professors[professorIndex] };
+      const matches = await secretMatches(professor.password, password);
+      if (matches) {
+        if (!isHashedSecret(professor.password)) {
+          professor.password = await hashSecret(password);
+        }
+        const showCode = professor.isFirstLogin === true;
+        professor.lastLoginAt = new Date().toISOString();
+        if (showCode) {
+          await showAccountCodeModal({
+            fullName: professor.name || professor.username || username,
+            email: professor.email || "",
+            role: "Teacher",
+            username: professor.username || username,
+            password
+          });
+          professor.isFirstLogin = false;
+        }
+        professors[professorIndex] = professor;
+        writeProfessors(professors);
+        localStorage.setItem(STORAGE.teacherLogged, "true");
+        localStorage.removeItem(STORAGE.adminLogged);
+        localStorage.setItem(STORAGE.currentTeacher, professor.name || professor.username);
+        window.location.href = "prof-dashboard.html";
+        return;
+      }
     }
     alert(getText({
       fr: "Identifiants incorrects. Utilisez un compte professeur cree par l'admin, ou admin / 1234.",
@@ -4418,52 +4421,65 @@ function initTeacherLogin() {
     }));
   });
 
-  if (resetForm) {
-    resetForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const data = new FormData(resetForm);
-      const username = String(data.get("resetUsername") || "").trim();
-      const rawResetClassCode = String(data.get("resetClassCode") || "").trim();
-      const classCode = normalizeLabCode(rawResetClassCode || "DIRECT");
-      const email = String(data.get("resetEmail") || "").trim();
-      const newPassword = String(data.get("newPassword") || "").trim();
-      const confirmPassword = String(data.get("confirmPassword") || "").trim();
-      const validationError = validateResetPassword(newPassword, confirmPassword);
-      if (validationError) {
-        alert(validationError);
-        return;
-      }
-      const professors = readProfessors();
-      const professorIndex = professors.findIndex((item) => String(item.username || "").trim().toLowerCase() === username.toLowerCase());
-      if (professorIndex === -1) {
-        alert(getText({ fr: "Aucun professeur trouve avec ce nom d'utilisateur.", ar: "لم يتم العثور على أستاذ بهذا الاسم.", en: "No teacher found with this username." }));
-        return;
-      }
-      const professor = professors[professorIndex];
-      const teacherCodes = professorClassCodes(professor).map((code) => normalizeLabCode(code));
-      const adminValidated = rawResetClassCode.toUpperCase() === "ADMIN-1234";
-      if (!adminValidated && !teacherCodes.includes(classCode)) {
-        alert(getText({ fr: "Le code classe ne correspond pas a ce professeur.", ar: "رمز القسم لا يطابق هذا الأستاذ.", en: "The class code does not match this teacher." }));
-        return;
-      }
-      if (!accountEmailMatches(professor, email)) {
-        alert(getText({ fr: "L'email ne correspond pas au compte.", ar: "البريد الإلكتروني لا يطابق الحساب.", en: "The email does not match this account." }));
-        return;
-      }
-      if (professors.some((item, index) => index !== professorIndex && String(item.password || "") === newPassword)) {
-        alert(getText({ fr: "Ce mot de passe est deja utilise par un autre compte.", ar: "كلمة المرور مستعملة في حساب آخر.", en: "This password is already used by another account." }));
-        return;
-      }
-      professors[professorIndex] = { ...professor, password: newPassword, passwordUpdatedAt: new Date().toISOString() };
-      writeProfessors(professors);
-      resetForm.reset();
-      setTeacherResetMode(false);
-      await showResetConfirmation(
-        { fr: "Compte enseignant mis a jour", ar: "تم تحديث حساب الأستاذ", en: "Teacher account updated" },
-        { fr: "Votre mot de passe enseignant a ete reinitialise avec succes.", ar: "تمت إعادة تعيين كلمة مرور الأستاذ بنجاح.", en: "Your teacher password has been reset successfully." }
-      );
+  if (requestForm) requestForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(requestForm);
+    const firstName = String(data.get("firstName") || "").trim();
+    const lastName = String(data.get("lastName") || "").trim();
+    const email = String(data.get("email") || "").trim().toLowerCase();
+    const level = normalizeLevelKey(data.get("level") || "cem");
+    const subject = String(data.get("subject") || "").trim();
+    const name = normalizeStudentFullName(firstName, lastName);
+
+    if (!firstName || !lastName || !email) {
+      alert(getText({ fr: "Prenom, nom et email sont obligatoires.", ar: "Prenom, nom et email sont obligatoires.", en: "First name, last name and email are required." }));
+      return;
+    }
+
+    const professors = readProfessors();
+    if (professors.some((item) => String(item.email || "").toLowerCase() === email || String(item.name || "").toLowerCase() === name.toLowerCase())) {
+      alert(getText({ fr: "Un compte professeur existe deja pour ces informations. Connectez-vous avec le code fourni.", ar: "Un compte professeur existe deja pour ces informations. Connectez-vous avec le code fourni.", en: "A teacher account already exists for this information. Log in with the provided code." }));
+      return;
+    }
+
+    const requests = readTeacherRequests();
+    if (requests.some((item) => String(item.email || "").toLowerCase() === email)) {
+      alert(getText({ fr: "Votre demande est deja en attente d'acceptation admin.", ar: "Votre demande est deja en attente d'acceptation admin.", en: "Your request is already waiting for admin approval." }));
+      return;
+    }
+
+    const username = teacherUsernameFromName(name, [...professors, ...requests]);
+    const password = generateAccountCode(name, "Teacher", [...professors, ...requests]);
+    const passwordHash = await hashSecret(password);
+    requests.unshift({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      firstName,
+      lastName,
+      name,
+      username,
+      email,
+      level,
+      subject,
+      password: passwordHash || password,
+      isFirstLogin: false,
+      status: "pending",
+      createdAt: new Date().toISOString()
     });
-  }
+    writeTeacherRequests(requests);
+    requestForm.reset();
+    await showAccountCodeModal({
+      fullName: name,
+      email,
+      role: "Teacher",
+      username,
+      password
+    });
+    alert(getText({
+      fr: "Demande envoyee. Gardez ce code : il fonctionnera seulement apres acceptation par l'admin.",
+      ar: "Demande envoyee. Gardez ce code : il fonctionnera seulement apres acceptation par l'admin.",
+      en: "Request sent. Keep this code: it will work only after the admin accepts it."
+    }));
+  });
 }
 
 function renderAdminProfessors() {
@@ -4475,7 +4491,7 @@ function renderAdminProfessors() {
       <div>
         <strong>${escapeHtml(professor.name || professor.username)}</strong>
         <p>${escapeHtml(professor.subject || "Sciences")} - ${escapeHtml(professor.classCode || "DIRECT")}</p>
-        <code>${escapeHtml(professor.username || "")} / ${escapeHtml(professor.password || "")}</code>
+        <code>${escapeHtml(professor.username || "")}</code>
       </div>
       <button type="button" class="secondary-btn" data-remove-professor="${index}">${escapeHtml(getText({ fr: "Supprimer", ar: "Supprimer", en: "Remove" }))}</button>
     </article>
@@ -4505,7 +4521,6 @@ function renderAdminStudents() {
         <div>
           <strong>${escapeHtml(student.name || "-")}</strong>
           <p>${escapeHtml(getText(level))} - ${escapeHtml(student.classCode || "DIRECT")}</p>
-          <code>${escapeHtml(student.password || "-")}</code>
         </div>
       </article>
     `;
@@ -4829,7 +4844,7 @@ function renderAdminProfessors() {
           <div>
             <strong>${escapeHtml(professor.name || professor.username)}</strong>
             <p>${escapeHtml(professor.subject || "Sciences")}</p>
-            <code>${escapeHtml(professor.username || "")} / ${escapeHtml(professor.password || "")}</code>
+            <code>${escapeHtml(professor.username || "")}</code>
           </div>
           <button type="button" class="secondary-btn" data-remove-professor="${index}">${escapeHtml(getText({ fr: "Supprimer", ar: "Supprimer", en: "Remove" }))}</button>
         </div>
@@ -4904,7 +4919,7 @@ function renderAdminStudents() {
           <div>
             <strong>${escapeHtml(student.name || "-")}</strong>
             <p>${escapeHtml(getText(level))} - ${escapeHtml(kind)} - ${escapeHtml(getText({ fr: "Rang", ar: "الترتيب", en: "Rank" }))} #${escapeHtml(String(ranking?.rank || "-"))}</p>
-            <code>${escapeHtml(code)} | ${escapeHtml(student.password || "-")}</code>
+            <code>${escapeHtml(code)}</code>
           </div>
           <div class="admin-student-actions">
             <span class="badge badge-light">${escapeHtml(String(ranking?.score ?? 0))}%</span>
@@ -5049,6 +5064,110 @@ function renderAdminLanguages() {
   `).join("");
 }
 
+function teacherUsernameFromName(fullName, professors) {
+  const base = String(fullName || "teacher")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase() || "teacher";
+  let username = base;
+  let suffix = 2;
+  const taken = new Set(professors.map((item) => String(item.username || "").trim().toLowerCase()));
+  while (taken.has(username.toLowerCase())) {
+    username = `${base}_${suffix}`;
+    suffix += 1;
+  }
+  return username;
+}
+
+async function approveTeacherRequest(index) {
+  const requests = readTeacherRequests();
+  const request = requests[index];
+  if (!request) return;
+  const professors = readProfessors();
+  const fullName = request.name || normalizeStudentFullName(request.firstName, request.lastName);
+  const username = request.username || teacherUsernameFromName(fullName, [...professors, ...requests]);
+  const fallbackPassword = request.password ? "" : generateAccountCode(fullName, "Teacher", professors);
+  const storedPassword = request.password || await hashSecret(fallbackPassword);
+  professors.unshift({
+    name: fullName,
+    username,
+    email: request.email || "",
+    password: storedPassword || fallbackPassword,
+    subject: request.subject || "",
+    level: normalizeLevelKey(request.level || "cem"),
+    classCode: "",
+    isFirstLogin: false,
+    approvedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString()
+  });
+  writeProfessors(professors);
+  requests.splice(index, 1);
+  writeTeacherRequests(requests);
+  renderAdminDashboard();
+  if (fallbackPassword) {
+    await showAccountCodeModal({
+      fullName,
+      email: request.email || "",
+      role: "Teacher",
+      username,
+      password: fallbackPassword
+    });
+  }
+}
+
+function rejectTeacherRequest(index) {
+  const requests = readTeacherRequests();
+  const request = requests[index];
+  if (!request) return;
+  const confirmed = window.confirm(getText({
+    fr: `Refuser la demande de ${request.name || "ce professeur"} ?`,
+    ar: `Refuser la demande de ${request.name || "ce professeur"} ?`,
+    en: `Reject the request from ${request.name || "this teacher"}?`
+  }));
+  if (!confirmed) return;
+  requests.splice(index, 1);
+  writeTeacherRequests(requests);
+  renderAdminDashboard();
+}
+
+function renderAdminTeacherRequests() {
+  const target = document.getElementById("admin-teacher-request-list");
+  if (!target) return;
+  const requests = readTeacherRequests();
+  if (!requests.length) {
+    target.innerHTML = `<div class="empty-card">${escapeHtml(getText({ fr: "Aucune demande en attente.", ar: "Aucune demande en attente.", en: "No pending teacher request." }))}</div>`;
+    return;
+  }
+  target.innerHTML = requests.map((request, index) => {
+    const level = LEVEL_LABELS[normalizeLevelKey(request.level)] || LEVEL_LABELS.cem;
+    const date = request.createdAt ? new Date(request.createdAt).toLocaleString() : "";
+    return `
+      <article class="admin-list-card admin-list-card-column">
+        <div class="admin-row-main">
+          <div>
+            <strong>${escapeHtml(request.name || "-")}</strong>
+            <p>${escapeHtml(request.email || "-")} - ${escapeHtml(getText(level))}</p>
+            <code>${escapeHtml(request.username || "")}</code>
+            <p>${escapeHtml(request.subject || "Sciences")} ${date ? `- ${escapeHtml(date)}` : ""}</p>
+          </div>
+          <div class="admin-student-actions">
+            <button type="button" class="primary-btn" data-approve-teacher-request="${index}">${escapeHtml(getText({ fr: "Accepter", ar: "Accepter", en: "Accept" }))}</button>
+            <button type="button" class="secondary-btn danger-soft-btn" data-reject-teacher-request="${index}">${escapeHtml(getText({ fr: "Refuser", ar: "Refuser", en: "Reject" }))}</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+  target.querySelectorAll("[data-approve-teacher-request]").forEach((button) => {
+    button.addEventListener("click", () => approveTeacherRequest(Number(button.dataset.approveTeacherRequest)));
+  });
+  target.querySelectorAll("[data-reject-teacher-request]").forEach((button) => {
+    button.addEventListener("click", () => rejectTeacherRequest(Number(button.dataset.rejectTeacherRequest)));
+  });
+}
+
 function renderAdminDashboard() {
   const stats = getAdminStats();
   setAdminStat("admin-stat-professors", stats.professors.length);
@@ -5060,6 +5179,7 @@ function renderAdminDashboard() {
   setAdminStat("admin-stat-success", `${stats.averageSuccess}%`);
   setAdminStat("admin-stat-active", stats.recentActivity.length || stats.rows.filter((row) => row.experimentId).length);
   renderAdminProfessors();
+  renderAdminTeacherRequests();
   renderAdminClasses();
   renderAdminStudents();
   renderAdminRanking();
@@ -5125,16 +5245,15 @@ function initAdminDashboard() {
   initAdminFilters();
   const form = document.getElementById("admin-professor-form");
   if (form) {
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const data = new FormData(form);
       const name = String(data.get("name") || "").trim();
       const username = String(data.get("username") || "").trim();
-      const password = String(data.get("password") || "").trim();
       const subject = String(data.get("subject") || "").trim();
       const classCode = String(data.get("classCode") || "").trim().toUpperCase();
-      if (!name || !username || !password) {
-        alert(getText({ fr: "Nom, utilisateur et mot de passe sont obligatoires.", ar: "Nom, utilisateur et mot de passe sont obligatoires.", en: "Name, username and password are required." }));
+      if (!name || !username) {
+        alert(getText({ fr: "Nom et utilisateur sont obligatoires.", ar: "Nom et utilisateur sont obligatoires.", en: "Name and username are required." }));
         return;
       }
       const professors = readProfessors();
@@ -5142,10 +5261,27 @@ function initAdminDashboard() {
         alert(getText({ fr: "Ce nom d'utilisateur existe deja.", ar: "Ce nom d'utilisateur existe deja.", en: "This username already exists." }));
         return;
       }
-      professors.unshift({ name, username, password, subject, classCode, createdAt: new Date().toISOString() });
+      const password = generateAccountCode(name, "Teacher", professors);
+      const passwordHash = await hashSecret(password);
+      professors.unshift({
+        name,
+        username,
+        password: passwordHash || password,
+        subject,
+        classCode,
+        isFirstLogin: false,
+        createdAt: new Date().toISOString()
+      });
       writeProfessors(professors);
       form.reset();
       renderAdminDashboard();
+      await showAccountCodeModal({
+        fullName: name,
+        email: "",
+        role: "Teacher",
+        username,
+        password
+      });
     });
   }
   renderAdminDashboard();
@@ -5155,6 +5291,29 @@ function normalizeStudentFullName(firstName, lastName) {
   return `${String(firstName || "").trim()} ${String(lastName || "").trim()}`
     .replace(/\s+/g, " ")
     .trim();
+}
+
+const SECRET_HASH_PREFIX = "sha256:";
+
+function isHashedSecret(value) {
+  return String(value || "").startsWith(SECRET_HASH_PREFIX);
+}
+
+async function hashSecret(value) {
+  const raw = String(value || "");
+  if (!raw) return "";
+  if (!window.crypto || !window.crypto.subtle) return raw;
+  const data = new TextEncoder().encode(raw);
+  const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+  const hashHex = Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${SECRET_HASH_PREFIX}${hashHex}`;
+}
+
+async function secretMatches(stored, input) {
+  const storedValue = String(stored || "");
+  if (!storedValue) return false;
+  if (isHashedSecret(storedValue)) return storedValue === await hashSecret(input);
+  return storedValue === String(input || "");
 }
 
 function generateStudentPassword(fullName, level, students) {
@@ -5170,7 +5329,31 @@ function generateStudentPassword(fullName, level, students) {
   do {
     const randomCode = Math.random().toString(36).slice(2, 6).toUpperCase();
     password = `${levelCode}-${baseName}-${randomCode}`;
-  } while (students.some((student) => student && student.password === password));
+  } while (students.some((student) => {
+    const stored = String(student?.password || "");
+    return stored && !isHashedSecret(stored) && stored === password;
+  }));
+
+  return password;
+}
+
+function generateAccountCode(fullName, role, existing = []) {
+  const roleCode = String(role || "user").slice(0, 3).toUpperCase();
+  const baseName = String(fullName || role || "USER")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "")
+    .toUpperCase()
+    .slice(0, 6) || "USER";
+  let password = "";
+
+  do {
+    const randomCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+    password = `${roleCode}-${baseName}-${randomCode}`;
+  } while (existing.some((item) => {
+    const stored = String(item?.password || "");
+    return stored && !isHashedSecret(stored) && stored === password;
+  }));
 
   return password;
 }
@@ -5190,15 +5373,21 @@ function ensureStudentPasswordModal() {
       <div class="student-password-modal__icon" aria-hidden="true">🔑</div>
       <h2 id="student-password-modal-title">${dualText("Ton code est pret", "رمزك جاهز", "Your code is ready")}</h2>
       <p id="student-password-modal-text" class="student-password-modal__text"></p>
+      <p id="student-password-modal-warning" class="student-password-modal__warning"></p>
       <div class="student-password-modal__codebox">
         <strong id="student-password-modal-code"></strong>
-        <button type="button" class="secondary-btn student-password-modal__copy" id="student-password-modal-copy">
-          <span aria-hidden="true">📋</span>
-          <span>${getText({ fr: "Copier", ar: "نسخ", en: "Copy" })}</span>
-        </button>
+        <div class="student-password-modal__actions">
+          <button type="button" class="secondary-btn student-password-modal__copy" id="student-password-modal-copy">
+            <span aria-hidden="true">📋</span>
+            <span>${getText({ fr: "Copy Code", ar: "Copy Code", en: "Copy Code" })}</span>
+          </button>
+          <button type="button" class="secondary-btn student-password-modal__download" id="student-password-modal-download">
+            <span aria-hidden="true">⬇️</span>
+            <span>${getText({ fr: "Download Code (.txt)", ar: "Download Code (.txt)", en: "Download Code (.txt)" })}</span>
+          </button>
+        </div>
       </div>
       <p id="student-password-modal-status" class="student-password-modal__status" aria-live="polite"></p>
-      <button type="button" class="primary-btn student-password-modal__confirm" id="student-password-modal-confirm">${getText({ fr: "Continuer", ar: "متابعة", en: "Continue" })}</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -5219,33 +5408,102 @@ async function copyTextValue(value) {
   return copied;
 }
 
-function showStudentPasswordModal(studentName, password) {
+function sanitizeFilename(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function localizedAccountLabels() {
+  const lang = currentLanguage();
+  if (lang === "ar") {
+    return {
+      fullName: "الاسم الكامل",
+      email: "البريد الإلكتروني",
+      role: "الدور",
+      username: "اسم المستخدم",
+      password: "كلمة المرور / الرمز",
+      warning: "يرجى حفظ كلمة المرور هذه بأمان. لن يتم عرضها مرة أخرى."
+    };
+  }
+  if (lang === "en") {
+    return {
+      fullName: "Full Name",
+      email: "Email",
+      role: "Role",
+      username: "Username",
+      password: "Password/Code",
+      warning: "Please save this password securely. It will not be shown again."
+    };
+  }
+  return {
+    fullName: "Nom complet",
+    email: "Email",
+    role: "Role",
+    username: "Nom d'utilisateur",
+    password: "Mot de passe / Code",
+    warning: "Please save this password securely. It will not be shown again."
+  };
+}
+
+function buildAccountDownloadText({ fullName, email, role, username, password }) {
+  const safeEmail = String(email || "").trim() || "-";
+  const safeRole = String(role || "User").trim() || "User";
+  const labels = localizedAccountLabels();
+  const lines = [
+    `${labels.fullName}: ${fullName}`,
+    `${labels.email}: ${safeEmail}`,
+    `${labels.role}: ${safeRole}`
+  ];
+  if (username) lines.push(`${labels.username}: ${username}`);
+  lines.push(`${labels.password}: ${password}`, "", labels.warning);
+  return lines.join("\n");
+}
+
+function downloadAccountFile(filename, content) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function showAccountCodeModal({ fullName, email, role, username, password }) {
   const modal = ensureStudentPasswordModal();
   const title = modal.querySelector("#student-password-modal-title");
   const icon = modal.querySelector(".student-password-modal__icon");
   const text = modal.querySelector("#student-password-modal-text");
+  const warning = modal.querySelector("#student-password-modal-warning");
   const code = modal.querySelector("#student-password-modal-code");
   const status = modal.querySelector("#student-password-modal-status");
-  const confirm = modal.querySelector("#student-password-modal-confirm");
   const copyButton = modal.querySelector("#student-password-modal-copy");
+  const downloadButton = modal.querySelector("#student-password-modal-download");
   const closeButtons = modal.querySelectorAll("[data-password-close]");
 
-  if (!text || !code || !status || !confirm || !copyButton) return Promise.resolve();
+  if (!text || !warning || !code || !status || !copyButton || !downloadButton) return Promise.resolve();
 
-  if (title) title.innerHTML = dualText("Ton code est pret", "رمزك جاهز", "Your code is ready");
+  if (title) title.innerHTML = localizedTextMarkup({
+    fr: "Your account code",
+    ar: "Your account code",
+    en: "Your account code"
+  });
   if (icon) icon.textContent = "KEY";
-  copyButton.hidden = false;
   text.innerHTML = localizedTextMarkup({
-    fr: `Compte cree pour ${studentName}. Sauvegarde ce code maintenant : tu devras l'utiliser pour te connecter plus tard.`,
-    ar: `تم إنشاء الحساب باسم ${studentName}. احتفظ بهذا الرمز جيدا من أجل الدخول في المرة القادمة.`,
-    en: `Account created for ${studentName}. Save this code now: you will need it to log in later.`
+    fr: username ? `Identifiants pour ${fullName} (${role}).` : `Code du compte pour ${fullName} (${role}).`,
+    ar: username ? `بيانات الدخول الخاصة بـ ${fullName} (${role}).` : `رمز الحساب الخاص بـ ${fullName} (${role}).`,
+    en: username ? `Login credentials for ${fullName} (${role}).` : `Account code for ${fullName} (${role}).`
   });
-  code.textContent = password;
-  status.textContent = getText({
-    fr: "Important : copie ou note ce code avant de continuer. Sans ce code, tu ne pourras pas rouvrir ton compte.",
-    ar: "Important: copy or write down this code before continuing. You will use it to log in again.",
-    en: "Important: copy or write down this code before continuing. You will use it to log in again."
-  });
+  warning.textContent = "Please save this password securely. It will not be shown again.";
+  code.textContent = username
+    ? `${getText({ fr: "Utilisateur", ar: "اسم المستخدم", en: "Username" })}: ${username}\n${getText({ fr: "Mot de passe", ar: "كلمة المرور", en: "Password" })}: ${password}`
+    : password;
+  status.textContent = "";
   modal.hidden = false;
   document.body.classList.add("modal-open");
 
@@ -5254,15 +5512,25 @@ function showStudentPasswordModal(studentName, password) {
       modal.hidden = true;
       document.body.classList.remove("modal-open");
       copyButton.removeEventListener("click", onCopy);
-      confirm.removeEventListener("click", onConfirm);
+      downloadButton.removeEventListener("click", onDownload);
       closeButtons.forEach((button) => button.removeEventListener("click", onConfirm));
     };
 
     const onCopy = async () => {
-      const copied = await copyTextValue(password).catch(() => false);
+      const copyValue = username ? `Username: ${username}\nPassword/Code: ${password}` : password;
+      const copied = await copyTextValue(copyValue).catch(() => false);
       status.textContent = copied
-        ? getText({ fr: "Code copie.", ar: "تم نسخ الرمز.", en: "Code copied." })
-        : getText({ fr: "Impossible de copier automatiquement.", ar: "تعذر النسخ تلقائيا.", en: "Unable to copy automatically." });
+        ? getText({ fr: "Code copied.", ar: "Code copied.", en: "Code copied." })
+        : getText({ fr: "Unable to copy automatically.", ar: "Unable to copy automatically.", en: "Unable to copy automatically." });
+    };
+
+    const onDownload = () => {
+      const safeName = sanitizeFilename(fullName) || "account";
+      const safeRole = sanitizeFilename(role) || "user";
+      const filename = `${safeRole}-${safeName}-code.txt`;
+      const content = buildAccountDownloadText({ fullName, email, role, username, password });
+      downloadAccountFile(filename, content);
+      status.textContent = getText({ fr: "Download started.", ar: "Download started.", en: "Download started." });
     };
 
     const onConfirm = () => {
@@ -5271,80 +5539,7 @@ function showStudentPasswordModal(studentName, password) {
     };
 
     copyButton.addEventListener("click", onCopy);
-    confirm.addEventListener("click", onConfirm);
-    closeButtons.forEach((button) => button.addEventListener("click", onConfirm));
-  });
-}
-
-function validateResetPassword(password, confirmPassword) {
-  if (!password || password.length < 6) {
-    return getText({
-      fr: "Le nouveau mot de passe doit contenir au moins 6 caracteres.",
-      ar: "يجب أن تحتوي كلمة المرور الجديدة على 6 أحرف على الأقل.",
-      en: "The new password must contain at least 6 characters."
-    });
-  }
-  if (!/[A-Za-zÀ-ÿ\u0600-\u06FF]/.test(password) || !/[0-9]/.test(password)) {
-    return getText({
-      fr: "Ajoutez au moins une lettre et un chiffre.",
-      ar: "أضف حرفا واحدا ورقما واحدا على الأقل.",
-      en: "Add at least one letter and one number."
-    });
-  }
-  if (password !== confirmPassword) {
-    return getText({
-      fr: "La confirmation ne correspond pas.",
-      ar: "التأكيد لا يطابق كلمة المرور.",
-      en: "The confirmation does not match."
-    });
-  }
-  return "";
-}
-
-function accountEmailMatches(account, email) {
-  const expected = String(account?.email || "").trim().toLowerCase();
-  const provided = String(email || "").trim().toLowerCase();
-  return !provided || !expected || expected === provided;
-}
-
-function showResetConfirmation(titleText, bodyText) {
-  const modal = ensureStudentPasswordModal();
-  const title = modal.querySelector("#student-password-modal-title");
-  const icon = modal.querySelector(".student-password-modal__icon");
-  const text = modal.querySelector("#student-password-modal-text");
-  const code = modal.querySelector("#student-password-modal-code");
-  const status = modal.querySelector("#student-password-modal-status");
-  const confirm = modal.querySelector("#student-password-modal-confirm");
-  const copyButton = modal.querySelector("#student-password-modal-copy");
-  const closeButtons = modal.querySelectorAll("[data-password-close]");
-  if (!text || !code || !status || !confirm || !copyButton) return Promise.resolve();
-
-  if (title) title.innerHTML = localizedTextMarkup(titleText);
-  if (icon) icon.textContent = "OK";
-  text.innerHTML = localizedTextMarkup(bodyText);
-  code.textContent = getText({ fr: "Mot de passe mis a jour", ar: "تم تحديث كلمة المرور", en: "Password updated" });
-  status.textContent = getText({
-    fr: "Vous pouvez maintenant vous reconnecter avec le nouveau mot de passe.",
-    ar: "يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.",
-    en: "You can now log in with the new password."
-  });
-  copyButton.hidden = true;
-  modal.hidden = false;
-  document.body.classList.add("modal-open");
-
-  return new Promise((resolve) => {
-    const cleanup = () => {
-      modal.hidden = true;
-      copyButton.hidden = false;
-      document.body.classList.remove("modal-open");
-      confirm.removeEventListener("click", onConfirm);
-      closeButtons.forEach((button) => button.removeEventListener("click", onConfirm));
-    };
-    const onConfirm = () => {
-      cleanup();
-      resolve();
-    };
-    confirm.addEventListener("click", onConfirm);
+    downloadButton.addEventListener("click", onDownload);
     closeButtons.forEach((button) => button.addEventListener("click", onConfirm));
   });
 }
@@ -5463,7 +5658,6 @@ function initStudentForm() {
   const signupForm = document.getElementById("student-signup-form");
   const promoForm = document.getElementById("student-promo-form");
   const loginForm = document.getElementById("student-login-form");
-  const resetForm = document.getElementById("student-reset-form");
   if (!signupForm || !promoForm || !loginForm) return;
   const levelInput = signupForm.querySelector('input[name="level"]');
   const levelButtons = document.querySelectorAll("[data-level-choice]");
@@ -5472,8 +5666,6 @@ function initStudentForm() {
   const levelPanel = document.getElementById("student-level-panel");
   const promoCodeInput = promoForm.querySelector('input[name="promoCode"]');
   const promoLevelPreview = document.getElementById("student-promo-level");
-  const forgotButton = document.querySelector("[data-student-forgot]");
-  const backLoginButton = document.querySelector("[data-student-back-login]");
   const savedLevel = normalizeLevelKey(localStorage.getItem(STORAGE.currentLevel) || "cem");
 
   function selectLevel(level) {
@@ -5519,8 +5711,6 @@ function initStudentForm() {
   authTabs.forEach((button) => {
     button.addEventListener("click", () => setMode(button.dataset.authMode || "signup"));
   });
-  if (forgotButton) forgotButton.addEventListener("click", () => setMode("reset"));
-  if (backLoginButton) backLoginButton.addEventListener("click", () => setMode("login"));
   if (promoCodeInput) promoCodeInput.addEventListener("input", updatePromoPreview);
   setMode("signup");
   updatePromoPreview();
@@ -5551,12 +5741,14 @@ function initStudentForm() {
     }
 
     const password = generateStudentPassword(fullName, selectedLevel, students);
+    const passwordHash = await hashSecret(password);
     const nextStudent = {
       name: fullName,
-      password,
+      password: passwordHash || password,
       classCode: "DIRECT",
       level: selectedLevel,
       activeCode: "",
+      isFirstLogin: true,
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString()
     };
@@ -5569,7 +5761,14 @@ function initStudentForm() {
     localStorage.removeItem(STORAGE.currentSubject);
     localStorage.removeItem(STORAGE.activeLabCode);
 
-    await showStudentPasswordModal(fullName, password);
+    await showAccountCodeModal({
+      fullName,
+      email: "",
+      role: "Student",
+      password
+    });
+    students[0].isFirstLogin = false;
+    localStorage.setItem(STORAGE.students, JSON.stringify(students));
     window.location.href = "dashboard.html";
   });
 
@@ -5612,13 +5811,15 @@ function initStudentForm() {
 
     const selectedLevel = normalizeLevelKey(assignment.level || "cem");
     const password = generateStudentPassword(fullName, selectedLevel, students);
+    const passwordHash = await hashSecret(password);
     const subject = defaultSubjectForAssignment(assignment);
     const nextStudent = {
       name: fullName,
-      password,
+      password: passwordHash || password,
       classCode: assignment.code,
       level: selectedLevel,
       activeCode: assignment.code,
+      isFirstLogin: true,
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString()
     };
@@ -5632,29 +5833,55 @@ function initStudentForm() {
     if (subject) localStorage.setItem(STORAGE.currentSubject, JSON.stringify(subject));
     else localStorage.removeItem(STORAGE.currentSubject);
 
-    await showStudentPasswordModal(fullName, password);
+    await showAccountCodeModal({
+      fullName,
+      email: "",
+      role: "Student",
+      password
+    });
+    students[0].isFirstLogin = false;
+    localStorage.setItem(STORAGE.students, JSON.stringify(students));
     window.location.href = "dashboard.html";
   });
 
-  loginForm.addEventListener("submit", (event) => {
+  loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(loginForm);
     const password = String(data.get("loginPassword") || "").trim();
     const students = readJson(STORAGE.students, []);
-    const existingIdx = students.findIndex((student) => String(student.password || "") === password);
     if (!password) {
       alert(getText({ fr: "Entre ton code de connexion.", ar: "Enter your login code.", en: "Enter your login code." }));
       return;
+    }
+    let existingIdx = -1;
+    for (let index = 0; index < students.length; index += 1) {
+      if (await secretMatches(students[index]?.password, password)) {
+        existingIdx = index;
+        break;
+      }
     }
     if (existingIdx === -1) {
       alert(getText({ fr: "Code introuvable. Verifie le code genere lors de l'inscription.", ar: "Code not found. Check the code generated during signup.", en: "Code not found. Check the code generated during signup." }));
       return;
     }
-    const existingStudent = students[existingIdx];
+    const existingStudent = { ...students[existingIdx] };
     const nextStudent = {
       ...existingStudent,
       lastLoginAt: new Date().toISOString()
     };
+    if (!isHashedSecret(nextStudent.password)) {
+      nextStudent.password = await hashSecret(password);
+    }
+    const showCode = nextStudent.isFirstLogin === true;
+    if (showCode) {
+      await showAccountCodeModal({
+        fullName: nextStudent.name || "",
+        email: nextStudent.email || "",
+        role: "Student",
+        password
+      });
+      nextStudent.isFirstLogin = false;
+    }
     students[existingIdx] = nextStudent;
     localStorage.setItem(STORAGE.students, JSON.stringify(students));
     localStorage.setItem(STORAGE.studentName, nextStudent.name);
@@ -5672,53 +5899,6 @@ function initStudentForm() {
     }
     window.location.href = "dashboard.html";
   });
-
-  if (resetForm) {
-    resetForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const data = new FormData(resetForm);
-      const resetName = String(data.get("resetName") || "").trim().toLowerCase();
-      const resetClassCode = canonicalClassCode(data.get("resetClassCode") || "DIRECT");
-      const resetEmail = String(data.get("resetEmail") || "").trim();
-      const newPassword = String(data.get("newPassword") || "").trim();
-      const confirmPassword = String(data.get("confirmPassword") || "").trim();
-      const validationError = validateResetPassword(newPassword, confirmPassword);
-      if (validationError) {
-        alert(validationError);
-        return;
-      }
-      const students = readJson(STORAGE.students, []);
-      const studentIndex = students.findIndex((student) => {
-        const sameName = String(student.name || "").trim().toLowerCase() === resetName;
-        const sameClass = normalizeLabCode(canonicalClassCode(student.classCode || "DIRECT")) === normalizeLabCode(resetClassCode);
-        return sameName && sameClass;
-      });
-      if (studentIndex === -1) {
-        alert(getText({ fr: "Aucun eleve ne correspond a ce nom et ce code classe.", ar: "لا يوجد تلميذ يطابق هذا الاسم ورمز القسم.", en: "No student matches this name and class code." }));
-        return;
-      }
-      if (!accountEmailMatches(students[studentIndex], resetEmail)) {
-        alert(getText({ fr: "L'email ne correspond pas au compte.", ar: "البريد الإلكتروني لا يطابق الحساب.", en: "The email does not match this account." }));
-        return;
-      }
-      if (students.some((student, index) => index !== studentIndex && String(student.password || "") === newPassword)) {
-        alert(getText({ fr: "Ce code est deja utilise par un autre eleve. Choisis un autre mot de passe.", ar: "هذا الرمز مستعمل من تلميذ آخر. اختر كلمة مرور أخرى.", en: "This code is already used by another student. Choose another password." }));
-        return;
-      }
-      students[studentIndex] = {
-        ...students[studentIndex],
-        password: newPassword,
-        passwordUpdatedAt: new Date().toISOString()
-      };
-      localStorage.setItem(STORAGE.students, JSON.stringify(students));
-      resetForm.reset();
-      setMode("login");
-      await showResetConfirmation(
-        { fr: "Compte eleve mis a jour", ar: "تم تحديث حساب التلميذ", en: "Student account updated" },
-        { fr: "Ton nouveau code est actif. Utilise-le dans la connexion rapide.", ar: "رمزك الجديد مفعل. استعمله في الدخول السريع.", en: "Your new code is active. Use it in quick login." }
-      );
-    });
-  }
 }
 
 function getAssistantReply(input, experimentId) {
@@ -5815,6 +5995,7 @@ function quizTitleText(config) {
   if (pageId === "quiz") initQuizPage();
   if (pageId === "teacher-login") initTeacherLogin();
   if (pageId === "teacher-dashboard") initTeacherDashboard();
+  if (pageId === "admin-login") renderAdminLogin();
   if (pageId === "admin-dashboard") initAdminDashboard();
   createAssistantWidget();
 }

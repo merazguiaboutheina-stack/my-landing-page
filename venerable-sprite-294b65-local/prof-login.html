@@ -126,75 +126,79 @@
               <span class="lang-ar">&#x62A;&#x633;&#x62C;&#x64A;&#x644; &#x627;&#x644;&#x62F;&#x62E;&#x648;&#x644;</span>
               <span class="lang-en">Log in</span>
             </button>
-            <button class="forgot-password-btn" type="button" data-teacher-forgot>
-              <span class="lang-fr">Mot de passe oublie ?</span>
-              <span class="lang-ar">هل نسيت كلمة المرور؟</span>
-              <span class="lang-en">Forgot password?</span>
-            </button>
             <p class="form-note" style="text-align:center;">
               <span class="lang-fr">Professeurs : utilisez le compte cree par l'admin. Admin : <strong>admin</strong> / <strong>1234</strong></span>
               <span class="lang-ar">Professeurs : utilisez le compte cree par l'admin. Admin : <strong>admin</strong> / <strong>1234</strong></span>
               <span class="lang-en">Professors: use the account created by admin. Admin: <strong>admin</strong> / <strong>1234</strong></span>
             </p>
           </form>
-          <form id="teacher-reset-form" class="stack-form reset-form-card" hidden>
-            <div class="panel-head">
-              <h2>
-                <span class="lang-fr">Reinitialisation enseignant</span>
-                <span class="lang-ar">إعادة تعيين حساب الأستاذ</span>
-                <span class="lang-en">Teacher password reset</span>
-              </h2>
-              <p>
-                <span class="lang-fr">Utilisez votre nom d'utilisateur avec un code classe lie a votre compte. L'admin peut aussi valider avec son code.</span>
-                <span class="lang-ar">استعمل اسم المستخدم مع رمز قسم مرتبط بحسابك. يمكن للمدير أيضا التأكيد برمزه.</span>
-                <span class="lang-en">Use your username with a class code linked to your account. Admin can also validate with the admin code.</span>
-              </p>
+        </section>
+
+        <section class="form-card teacher-request-card">
+          <div class="panel-head">
+            <h2>
+              <span class="lang-fr">Demande de compte professeur</span>
+              <span class="lang-ar">Demande de compte professeur</span>
+              <span class="lang-en">Teacher account request</span>
+            </h2>
+            <p>
+              <span class="lang-fr">Si vous n'avez pas encore de compte, envoyez vos informations a l'admin.</span>
+              <span class="lang-ar">Si vous n'avez pas encore de compte, envoyez vos informations a l'admin.</span>
+              <span class="lang-en">If you do not have an account yet, send your information to the admin.</span>
+            </p>
+          </div>
+          <form id="teacher-request-form" class="stack-form">
+            <div class="student-form-grid">
+              <label class="icon-field">
+                <span class="lang-fr">Prenom</span>
+                <span class="lang-ar">Prenom</span>
+                <span class="lang-en">First name</span>
+                <span class="input-icon" aria-hidden="true">&#x1F464;</span>
+                <input type="text" name="firstName" required data-placeholder-fr="Prenom" data-placeholder-ar="Prenom" data-placeholder-en="First name">
+              </label>
+              <label class="icon-field">
+                <span class="lang-fr">Nom</span>
+                <span class="lang-ar">Nom</span>
+                <span class="lang-en">Last name</span>
+                <span class="input-icon" aria-hidden="true">&#x1F465;</span>
+                <input type="text" name="lastName" required data-placeholder-fr="Nom" data-placeholder-ar="Nom" data-placeholder-en="Last name">
+              </label>
             </div>
             <label class="icon-field">
-              <span class="lang-fr">Nom d'utilisateur</span>
-              <span class="lang-ar">اسم المستخدم</span>
-              <span class="lang-en">Username</span>
-              <span class="input-icon" aria-hidden="true">&#x1F464;</span>
-              <input type="text" name="resetUsername" required data-placeholder-fr="Nom d'utilisateur" data-placeholder-ar="اسم المستخدم" data-placeholder-en="Username">
+              <span class="lang-fr">Email</span>
+              <span class="lang-ar">Email</span>
+              <span class="lang-en">Email</span>
+              <span class="input-icon" aria-hidden="true">&#x2709;</span>
+              <input type="email" name="email" required data-placeholder-fr="prof@example.com" data-placeholder-ar="prof@example.com" data-placeholder-en="teacher@example.com">
             </label>
             <label class="icon-field">
-              <span class="lang-fr">Code classe ou validation admin</span>
-              <span class="lang-ar">رمز القسم أو تحقق المدير</span>
-              <span class="lang-en">Class code or admin validation</span>
-              <span class="input-icon" aria-hidden="true">#</span>
-              <input type="text" name="resetClassCode" data-placeholder-fr="CEM2026 ou ADMIN-1234" data-placeholder-ar="CEM2026 أو ADMIN-1234" data-placeholder-en="CEM2026 or ADMIN-1234">
+              <span class="lang-fr">Niveau</span>
+              <span class="lang-ar">Niveau</span>
+              <span class="lang-en">Level</span>
+              <span class="input-icon" aria-hidden="true">&#x1F3EB;</span>
+              <select name="level" required>
+                <option value="lycee">Lycee</option>
+                <option value="cem">CEM</option>
+                <option value="primaire">Primaire</option>
+              </select>
             </label>
             <label class="icon-field">
-              <span class="lang-fr">Email (optionnel)</span>
-              <span class="lang-ar">البريد الإلكتروني (اختياري)</span>
-              <span class="lang-en">Email (optional)</span>
-              <span class="input-icon" aria-hidden="true">@</span>
-              <input type="email" name="resetEmail" data-placeholder-fr="Si le compte contient un email" data-placeholder-ar="إذا كان الحساب يحتوي على بريد" data-placeholder-en="If the account has an email">
-            </label>
-            <label class="icon-field">
-              <span class="lang-fr">Nouveau mot de passe</span>
-              <span class="lang-ar">كلمة المرور الجديدة</span>
-              <span class="lang-en">New password</span>
-              <span class="input-icon" aria-hidden="true">&#x1F511;</span>
-              <input type="password" name="newPassword" required minlength="6" data-placeholder-fr="Au moins 6 caracteres" data-placeholder-ar="6 أحرف على الأقل" data-placeholder-en="At least 6 characters">
-            </label>
-            <label class="icon-field">
-              <span class="lang-fr">Confirmation</span>
-              <span class="lang-ar">التأكيد</span>
-              <span class="lang-en">Confirm</span>
-              <span class="input-icon" aria-hidden="true">OK</span>
-              <input type="password" name="confirmPassword" required minlength="6" data-placeholder-fr="Repetez le mot de passe" data-placeholder-ar="أعد كتابة كلمة المرور" data-placeholder-en="Repeat the password">
+              <span class="lang-fr">Matiere</span>
+              <span class="lang-ar">Matiere</span>
+              <span class="lang-en">Subject</span>
+              <span class="input-icon" aria-hidden="true">&#x1F52C;</span>
+              <input type="text" name="subject" data-placeholder-fr="Sciences, physique..." data-placeholder-ar="Sciences, physique..." data-placeholder-en="Science, physics...">
             </label>
             <button class="primary-btn" type="submit" style="width:100%;margin-top:4px;">
-              <span class="lang-fr">Reinitialiser</span>
-              <span class="lang-ar">إعادة التعيين</span>
-              <span class="lang-en">Reset password</span>
+              <span class="lang-fr">Envoyer la demande</span>
+              <span class="lang-ar">Envoyer la demande</span>
+              <span class="lang-en">Send request</span>
             </button>
-            <button class="forgot-password-btn" type="button" data-teacher-back-login>
-              <span class="lang-fr">Retour a la connexion</span>
-              <span class="lang-ar">العودة إلى الدخول</span>
-              <span class="lang-en">Back to login</span>
-            </button>
+            <p class="form-note" style="text-align:center;">
+              <span class="lang-fr">Vous ne pourrez pas vous connecter avant l'acceptation par l'admin.</span>
+              <span class="lang-ar">Vous ne pourrez pas vous connecter avant l'acceptation par l'admin.</span>
+              <span class="lang-en">You cannot log in until the admin accepts the request.</span>
+            </p>
           </form>
         </section>
 

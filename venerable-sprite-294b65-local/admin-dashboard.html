@@ -69,12 +69,19 @@
         <form id="admin-professor-form" class="code-generator-form">
           <label>Nom complet<input name="name" type="text" required data-placeholder-fr="Nom du professeur" data-placeholder-ar="Nom du professeur" data-placeholder-en="Professor name"></label>
           <label>Utilisateur<input name="username" type="text" required data-placeholder-fr="ex : prof_svt" data-placeholder-ar="ex : prof_svt" data-placeholder-en="e.g. prof_svt"></label>
-          <label>Mot de passe<input name="password" type="text" required data-placeholder-fr="Mot de passe" data-placeholder-ar="Mot de passe" data-placeholder-en="Password"></label>
           <label>Matiere<input name="subject" type="text" data-placeholder-fr="Sciences, physique..." data-placeholder-ar="Sciences, physique..." data-placeholder-en="Science, physics..."></label>
           <label>Codes classe<input name="classCode" type="text" data-placeholder-fr="CEM2026, LYC2025" data-placeholder-ar="CEM2026, LYC2025" data-placeholder-en="CEM2026, LYC2025"></label>
-          <p class="form-note">Note : liez un ou plusieurs codes classe au professeur. Exemple : CEM2026, LYC2025. Les eleves doivent sauvegarder leur code de connexion personnel.</p>
+          <p class="form-note">Note : le mot de passe du professeur sera genere automatiquement et affiche une seule fois.</p>
           <button type="submit" class="primary-btn">Ajouter</button>
         </form>
+      </article>
+
+      <article class="panel-card admin-panel-requests">
+        <div class="panel-head">
+          <h2><span class="lang-fr">Demandes professeurs</span><span class="lang-ar">Demandes professeurs</span><span class="lang-en">Teacher requests</span></h2>
+          <p><span class="lang-fr">Les professeurs qui n'ont pas encore de compte attendent l'acceptation admin.</span><span class="lang-ar">Les professeurs qui n'ont pas encore de compte attendent l'acceptation admin.</span><span class="lang-en">Teachers without an account wait for admin approval.</span></p>
+        </div>
+        <div id="admin-teacher-request-list" class="admin-list"></div>
       </article>
 
       <article class="panel-card admin-panel-professors">

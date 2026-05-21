@@ -516,8 +516,12 @@ body[data-lang="ar"] .hero-quote {
 }
 
 .stack-form input,
+.stack-form select,
+.stack-form textarea,
 .filter-field input,
+.code-generator-form input,
 .code-generator-form select,
+.code-generator-form textarea,
 .assistant-form input {
   width: 100%;
   border: 2px solid rgba(31, 111, 235, 0.12);
@@ -525,6 +529,11 @@ body[data-lang="ar"] .hero-quote {
   padding: 16px 18px;
   color: var(--text);
   background: rgba(238, 246, 255, 0.62);
+}
+
+.stack-form select,
+.code-generator-form select {
+  appearance: none;
 }
 
 .selection-card,
@@ -2199,11 +2208,13 @@ body[data-lang="ar"] .icon-field .input-icon {
   right: 16px;
 }
 
-.icon-field input {
+.icon-field input,
+.icon-field select {
   padding-left: 52px;
 }
 
-body[data-lang="ar"] .icon-field input {
+body[data-lang="ar"] .icon-field input,
+body[data-lang="ar"] .icon-field select {
   padding-left: 18px;
   padding-right: 52px;
 }
@@ -3017,44 +3028,6 @@ body[data-page='student'] .page-shell {
   display: none !important;
 }
 
-.forgot-password-btn {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--primary);
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-  padding: 10px 12px;
-  border-radius: 12px;
-  text-align: center;
-  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-}
-
-.forgot-password-btn:hover,
-.forgot-password-btn:focus-visible {
-  background: rgba(31, 111, 235, 0.08);
-  color: var(--teal);
-  transform: translateY(-1px);
-}
-
-.reset-form-card {
-  padding: 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(31, 111, 235, 0.14);
-  background:
-    radial-gradient(circle at top right, rgba(36, 193, 206, 0.14), transparent 32%),
-    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,249,255,0.96));
-}
-
-.reset-form-card .panel-head h2 {
-  color: var(--navy);
-}
-
-.reset-form-card .student-form-grid {
-  align-items: start;
-}
-
 .student-auth-form .panel-head {
   margin-bottom: 4px;
 }
@@ -3237,7 +3210,7 @@ main.experiment-shell,
 .prof-login-wrap {
   min-height: calc(100vh - 64px);
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 0.95fr) minmax(520px, 1.05fr);
   gap: 0;
 }
 
@@ -3306,14 +3279,28 @@ main.experiment-shell,
 .prof-login-form-side {
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
   padding: 56px 48px;
   background: var(--surface);
 }
 
 .prof-login-form-side .form-card {
-  max-width: 420px;
+  max-width: 560px;
   width: 100%;
+}
+
+.teacher-request-card {
+  margin-top: 16px !important;
+}
+
+.teacher-request-card .student-form-grid {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.teacher-request-card .icon-field input,
+.teacher-request-card .icon-field select {
+  min-height: 62px;
 }
 
 /* ================================================================
@@ -3453,6 +3440,7 @@ main.experiment-shell,
   .prof-login-wrap { grid-template-columns: 1fr; }
   .prof-login-hero { padding: 32px 24px; }
   .prof-login-form-side { padding: 28px 20px; }
+  .teacher-request-card .student-form-grid { grid-template-columns: 1fr; }
   .teacher-stats-bar { grid-template-columns: repeat(2, 1fr); }
   .teacher-layout { grid-template-columns: 1fr; }
 }
@@ -3771,6 +3759,17 @@ body[data-page="admin-dashboard"] .student-pill > span {
   grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.25fr);
   gap: 18px;
   align-items: start;
+}
+
+body[data-page="admin-dashboard"] .code-generator-form label,
+body[data-page="admin-dashboard"] .code-generator-form input {
+  direction: ltr;
+  text-align: left;
+}
+
+body[data-page="admin-dashboard"] .code-generator-form .primary-btn {
+  min-height: 52px;
+  border-radius: 16px;
 }
 
 .admin-panel-wide {
@@ -4186,6 +4185,12 @@ body[data-lang="ar"] .student-password-modal__close {
   line-height: 1.7;
 }
 
+.student-password-modal__warning {
+  margin: 0 0 16px;
+  color: #b45309;
+  font-weight: 700;
+}
+
 .student-password-modal__codebox {
   display: grid;
   gap: 14px;
@@ -4193,6 +4198,13 @@ body[data-lang="ar"] .student-password-modal__close {
   padding: 18px;
   border-radius: 22px;
   background: rgba(20, 67, 120, 0.06);
+}
+
+.student-password-modal__actions {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .student-password-modal__codebox strong {
@@ -4207,11 +4219,13 @@ body[data-lang="ar"] .student-password-modal__close {
   color: var(--navy);
   font-size: clamp(1.05rem, 3vw, 1.45rem);
   letter-spacing: 0.04em;
+  line-height: 1.7;
+  white-space: pre-line;
   box-shadow: inset 0 0 0 1px rgba(31, 111, 235, 0.12);
 }
 
 .student-password-modal__copy,
-.student-password-modal__confirm {
+.student-password-modal__download {
   min-width: 180px;
 }
 
@@ -4220,10 +4234,6 @@ body[data-lang="ar"] .student-password-modal__close {
   margin: 14px 0 0;
   color: var(--teal);
   font-weight: 700;
-}
-
-.student-password-modal__confirm {
-  margin-top: 16px;
 }
 
 body.modal-open {
