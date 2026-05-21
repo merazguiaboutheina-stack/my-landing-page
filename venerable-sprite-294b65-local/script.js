@@ -2493,7 +2493,7 @@ function initTeacherLogin() {
       localStorage.setItem(STORAGE.adminLogged, "true");
       localStorage.removeItem(STORAGE.teacherLogged);
       localStorage.removeItem(STORAGE.currentTeacher);
-      window.location.href = "/admin";
+      window.location.href = "/admin-dashboard.html";
       return;
     }
     const professor = readProfessors().find((item) => String(item.username || "").trim() === username && String(item.password || "") === password);
@@ -4381,7 +4381,7 @@ function initTeacherLogin() {
       localStorage.setItem(STORAGE.adminLogged, "true");
       localStorage.removeItem(STORAGE.teacherLogged);
       localStorage.removeItem(STORAGE.currentTeacher);
-      window.location.href = "/admin";
+      window.location.href = "/admin-dashboard.html";
       return;
     }
     const professors = readProfessors();
@@ -5230,7 +5230,29 @@ function renderAdminLogin() {
       localStorage.setItem(STORAGE.adminLogged, "true");
       localStorage.removeItem(STORAGE.teacherLogged);
       localStorage.removeItem(STORAGE.currentTeacher);
-      window.location.href = "/admin";
+      window.location.href = "/admin-dashboard.html";
+      return;
+    }
+    alert(getText({ fr: "Identifiants admin incorrects.", ar: "Identifiants admin incorrects.", en: "Incorrect admin credentials." }));
+  });
+}
+
+function initAdminLogin() {
+  const form = document.getElementById("admin-login-form");
+  if (!form) {
+    renderAdminLogin();
+    return;
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const username = String(data.get("username") || "").trim();
+    const password = String(data.get("password") || "").trim();
+    if (username === "admin" && password === "1234") {
+      localStorage.setItem(STORAGE.adminLogged, "true");
+      localStorage.removeItem(STORAGE.teacherLogged);
+      localStorage.removeItem(STORAGE.currentTeacher);
+      window.location.href = "/admin-dashboard.html";
       return;
     }
     alert(getText({ fr: "Identifiants admin incorrects.", ar: "Identifiants admin incorrects.", en: "Incorrect admin credentials." }));
@@ -5995,7 +6017,7 @@ function quizTitleText(config) {
   if (pageId === "quiz") initQuizPage();
   if (pageId === "teacher-login") initTeacherLogin();
   if (pageId === "teacher-dashboard") initTeacherDashboard();
-  if (pageId === "admin-login") renderAdminLogin();
+  if (pageId === "admin-login") initAdminLogin();
   if (pageId === "admin-dashboard") initAdminDashboard();
   createAssistantWidget();
 }
