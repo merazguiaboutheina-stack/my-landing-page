@@ -56,7 +56,12 @@
 
 [[redirects]]
   from = "/admin"
-  to = "/admin-dashboard.html"
+  to = "/admin-login.html"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin-login"
+  to = "/.netlify/functions/admin-login"
   status = 200
 
 [[redirects]]

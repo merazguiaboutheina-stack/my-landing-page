@@ -11,6 +11,7 @@ const STORAGE = {
   lastResult: "virtulabLastResult",
   teacherLogged: "virtulabTeacherLogged",
   adminLogged: "virtulabAdminLogged",
+  adminSession: "virtulabAdminSession",
   currentTeacher: "virtulabCurrentTeacher",
   professors: "virtulabProfessors",
   teacherRequests: "virtulabTeacherSignupRequests",
@@ -486,6 +487,32 @@ function clearSession() {
   sessionStorage.clear();
 }
 
+function clearAdminSession() {
+  localStorage.removeItem(STORAGE.adminLogged);
+  sessionStorage.removeItem(STORAGE.adminSession);
+}
+
+function createAdminSession(token, ttlSeconds = 7200) {
+  const expiresAt = Date.now() + Math.max(60, Number(ttlSeconds) || 7200) * 1000;
+  sessionStorage.setItem(STORAGE.adminSession, JSON.stringify({ token, expiresAt }));
+  localStorage.removeItem(STORAGE.adminLogged);
+}
+
+function hasValidAdminSession() {
+  localStorage.removeItem(STORAGE.adminLogged);
+  try {
+    const session = JSON.parse(sessionStorage.getItem(STORAGE.adminSession) || "null");
+    if (!session || !session.token || Number(session.expiresAt || 0) <= Date.now()) {
+      clearAdminSession();
+      return false;
+    }
+    return true;
+  } catch {
+    clearAdminSession();
+    return false;
+  }
+}
+
 function updateStudentBadge() {
   const teacherLogged = localStorage.getItem(STORAGE.teacherLogged) === "true";
   const target = document.querySelector("[data-student-display]");
@@ -599,8 +626,7 @@ function defaultProfessors() {
 }
 
 function isDefaultProfessorAccount(professor) {
-  return String(professor?.username || "").trim() === "prof"
-    && String(professor?.password || "") === "1234";
+  return String(professor?.username || "").trim() === "prof";
 }
 
 function readProfessors() {
@@ -2489,13 +2515,6 @@ function initTeacherLogin() {
     const data = new FormData(form);
     const username = String(data.get("username") || "").trim();
     const password = String(data.get("password") || "").trim();
-    if (username === "admin" && password === "1234") {
-      localStorage.setItem(STORAGE.adminLogged, "true");
-      localStorage.removeItem(STORAGE.teacherLogged);
-      localStorage.removeItem(STORAGE.currentTeacher);
-      window.location.href = "/admin-dashboard.html";
-      return;
-    }
     const professor = readProfessors().find((item) => String(item.username || "").trim() === username && String(item.password || "") === password);
     if (professor) {
       localStorage.setItem(STORAGE.teacherLogged, "true");
@@ -2505,9 +2524,9 @@ function initTeacherLogin() {
       return;
     }
     alert(getText({
-      fr: "Identifiants incorrects. Utilisez un compte professeur cree par l'admin, ou admin / 1234.",
-      ar: "بيانات غير صحيحة. استعمل حساب أستاذ أنشأه المدير، أو admin / 1234.",
-      en: "Incorrect credentials. Use a professor account created by admin, or admin / 1234."
+      fr: "Identifiants incorrects. Utilisez le compte professeur cree par l'admin.",
+      ar: "بيانات غير صحيحة. استعمل حساب أستاذ أنشأه المدير.",
+      en: "Incorrect credentials. Use the professor account created by admin."
     }));
   });
 }
@@ -3673,7 +3692,7 @@ function applyPageTitles() {
 
 function updateStudentBadge() {
   const teacherLogged = localStorage.getItem(STORAGE.teacherLogged) === "true";
-  const adminLogged = localStorage.getItem(STORAGE.adminLogged) === "true";
+  const adminLogged = hasValidAdminSession();
   const studentName = localStorage.getItem(STORAGE.studentName) || "";
   const hasSession = teacherLogged || adminLogged || Boolean(studentName);
   const target = document.querySelector("[data-student-display]");
@@ -4028,7 +4047,7 @@ function initStudentForm() {
 }
 
 function initTeacherDashboard() {
-  if (localStorage.getItem(STORAGE.teacherLogged) !== "true" && localStorage.getItem(STORAGE.adminLogged) !== "true") {
+  if (localStorage.getItem(STORAGE.teacherLogged) !== "true" && !hasValidAdminSession()) {
     window.location.href = "prof-login.html";
     return;
   }
@@ -4377,13 +4396,6 @@ function initTeacherLogin() {
     const data = new FormData(form);
     const username = String(data.get("username") || "").trim();
     const password = String(data.get("password") || "").trim();
-    if (username === "admin" && password === "1234") {
-      localStorage.setItem(STORAGE.adminLogged, "true");
-      localStorage.removeItem(STORAGE.teacherLogged);
-      localStorage.removeItem(STORAGE.currentTeacher);
-      window.location.href = "/admin-dashboard.html";
-      return;
-    }
     const professors = readProfessors();
     const professorIndex = professors.findIndex((item) => String(item.username || "").trim() === username);
     if (professorIndex >= 0) {
@@ -4415,9 +4427,9 @@ function initTeacherLogin() {
       }
     }
     alert(getText({
-      fr: "Identifiants incorrects. Utilisez un compte professeur cree par l'admin, ou admin / 1234.",
-      ar: "Identifiants incorrects. Utilisez un compte professeur cree par l'admin, ou admin / 1234.",
-      en: "Incorrect credentials. Use a professor account created by admin, or admin / 1234."
+      fr: "Identifiants incorrects. Utilisez le compte professeur cree par l'admin.",
+      ar: "Identifiants incorrects. Utilisez le compte professeur cree par l'admin.",
+      en: "Incorrect credentials. Use the professor account created by admin."
     }));
   });
 
@@ -4628,7 +4640,7 @@ function currentTeacherProfile() {
 }
 
 function currentTeacherManagedCodes() {
-  if (localStorage.getItem(STORAGE.adminLogged) === "true") return null;
+  if (hasValidAdminSession()) return null;
   const professor = currentTeacherProfile();
   const current = String(localStorage.getItem(STORAGE.currentTeacher) || "").trim().toLowerCase();
   const profileCodes = professor ? professorClassCodes(professor).map((code) => normalizeLabCode(code || "DIRECT") || "DIRECT") : [];
@@ -4711,7 +4723,7 @@ function unlinkStudentFromTeacherClass(studentIndex) {
 }
 
 function deleteStudentPermanently(studentIndex) {
-  if (localStorage.getItem(STORAGE.adminLogged) !== "true") {
+  if (!hasValidAdminSession()) {
     alert(getText({
       fr: "Seul l'admin peut supprimer definitivement un compte eleve.",
       ar: "المدير فقط يمكنه حذف حساب التلميذ نهائيا.",
@@ -5207,33 +5219,33 @@ function renderAdminLogin() {
         <form id="admin-login-form" class="stack-form">
           <label>
             ${escapeHtml(getText({ fr: "Nom d'utilisateur", ar: "Nom d'utilisateur", en: "Username" }))}
-            <input name="username" type="text" required value="admin">
+            <input name="username" type="text" required autocomplete="username">
           </label>
           <label>
             ${escapeHtml(getText({ fr: "Mot de passe", ar: "Mot de passe", en: "Password" }))}
-            <input name="password" type="password" required value="1234">
+            <input name="password" type="password" required autocomplete="current-password">
           </label>
           <button class="primary-btn" type="submit">${escapeHtml(getText({ fr: "Entrer dans le dashboard admin", ar: "Entrer dans le dashboard admin", en: "Open admin dashboard" }))}</button>
-          <p class="form-note">Admin : <strong>admin</strong> / <strong>1234</strong></p>
+          <p class="form-note">${escapeHtml(getText({ fr: "Acces reserve aux administrateurs autorises.", ar: "Acces reserve aux administrateurs autorises.", en: "Access reserved for authorized administrators." }))}</p>
         </form>
       </article>
     </section>
   `;
   const form = document.getElementById("admin-login-form");
   if (!form) return;
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(form);
     const username = String(data.get("username") || "").trim();
     const password = String(data.get("password") || "").trim();
-    if (username === "admin" && password === "1234") {
-      localStorage.setItem(STORAGE.adminLogged, "true");
+    try {
+      await authenticateAdmin(username, password);
       localStorage.removeItem(STORAGE.teacherLogged);
       localStorage.removeItem(STORAGE.currentTeacher);
       window.location.href = "/admin-dashboard.html";
-      return;
+    } catch {
+      alert(getText({ fr: "Identifiants admin incorrects ou configuration admin manquante.", ar: "Identifiants admin incorrects ou configuration admin manquante.", en: "Incorrect admin credentials or missing admin configuration." }));
     }
-    alert(getText({ fr: "Identifiants admin incorrects.", ar: "Identifiants admin incorrects.", en: "Incorrect admin credentials." }));
   });
 }
 
@@ -5243,24 +5255,24 @@ function initAdminLogin() {
     renderAdminLogin();
     return;
   }
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(form);
     const username = String(data.get("username") || "").trim();
     const password = String(data.get("password") || "").trim();
-    if (username === "admin" && password === "1234") {
-      localStorage.setItem(STORAGE.adminLogged, "true");
+    try {
+      await authenticateAdmin(username, password);
       localStorage.removeItem(STORAGE.teacherLogged);
       localStorage.removeItem(STORAGE.currentTeacher);
       window.location.href = "/admin-dashboard.html";
-      return;
+    } catch {
+      alert(getText({ fr: "Identifiants admin incorrects ou configuration admin manquante.", ar: "Identifiants admin incorrects ou configuration admin manquante.", en: "Incorrect admin credentials or missing admin configuration." }));
     }
-    alert(getText({ fr: "Identifiants admin incorrects.", ar: "Identifiants admin incorrects.", en: "Incorrect admin credentials." }));
   });
 }
 
 function initAdminDashboard() {
-  if (localStorage.getItem(STORAGE.adminLogged) !== "true") {
+  if (!hasValidAdminSession()) {
     renderAdminLogin();
     return;
   }
@@ -5336,6 +5348,24 @@ async function secretMatches(stored, input) {
   if (!storedValue) return false;
   if (isHashedSecret(storedValue)) return storedValue === await hashSecret(input);
   return storedValue === String(input || "");
+}
+
+async function authenticateAdmin(username, password) {
+  const response = await fetch("/api/admin-login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  });
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    payload = {};
+  }
+  if (!response.ok || !payload.ok || !payload.session) {
+    throw new Error(payload.error || "admin-auth-failed");
+  }
+  createAdminSession(payload.session, payload.expiresIn);
 }
 
 function generateStudentPassword(fullName, level, students) {

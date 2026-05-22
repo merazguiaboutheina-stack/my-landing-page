@@ -89,6 +89,21 @@
 [functions]
   node_bundler = "esbuild"
 
+[[redirects]]
+  from = "/admin"
+  to = "/admin-login.html"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin-login"
+  to = "/.netlify/functions/admin-login"
+  status = 200
+
+[[redirects]]
+  from = "/api/chat"
+  to = "/.netlify/functions/gemini-chat"
+  status = 200
+
 [dev]
   port = 8888
   targetPort = 0

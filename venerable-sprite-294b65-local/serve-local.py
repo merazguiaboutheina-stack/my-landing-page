@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import argparse
 import functools
+import hashlib
+import hmac
 import json
 import mimetypes
 import os
+import secrets
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib import error, request
@@ -234,8 +237,8 @@ def gemini_chat(message: str, history, lab_name: str) -> str:
 class UnityFriendlyHandler(SimpleHTTPRequestHandler):
     server_version = "VirtuLabTajribatiLocal/1.0"
     CLEAN_ROUTES = {
-        "/admin": "/admin-dashboard.html",
-        "/admin/": "/admin-dashboard.html",
+        "/admin": "/admin-login.html",
+        "/admin/": "/admin-login.html",
     }
 
     def end_headers(self) -> None:
@@ -275,7 +278,7 @@ class UnityFriendlyHandler(SimpleHTTPRequestHandler):
         return super().send_head()
 
     def do_OPTIONS(self):
-        if self.path == "/api/chat":
+        if self.path in {"/api/chat", "/api/admin-login"}:
             self.send_response(204)
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -285,6 +288,10 @@ class UnityFriendlyHandler(SimpleHTTPRequestHandler):
         super().do_OPTIONS()
 
     def do_POST(self):
+        if self.path == "/api/admin-login":
+            self._handle_admin_login()
+            return
+
         if self.path != "/api/chat":
             self.send_error(404, "Endpoint not found.")
             return
@@ -311,6 +318,36 @@ class UnityFriendlyHandler(SimpleHTTPRequestHandler):
             return
 
         self._send_json(200, {"reply": reply})
+
+    def _handle_admin_login(self):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(length).decode("utf-8")
+            payload = json.loads(raw_body or "{}")
+        except json.JSONDecodeError:
+            self._send_json(400, {"ok": False, "error": "invalid-json"})
+            return
+
+        expected_username = os.environ.get("ADMIN_USERNAME", "")
+        expected_password = os.environ.get("ADMIN_PASSWORD", "")
+        expected_password_hash = os.environ.get("ADMIN_PASSWORD_HASH", "")
+        if not expected_username or not (expected_password or expected_password_hash):
+            self._send_json(503, {"ok": False, "error": "admin-auth-not-configured"})
+            return
+
+        username = str(payload.get("username", "")).strip()
+        password = str(payload.get("password", ""))
+        password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        password_ok = (
+            hmac.compare_digest(password_hash, expected_password_hash)
+            if expected_password_hash
+            else hmac.compare_digest(password, expected_password)
+        )
+        if not hmac.compare_digest(username, expected_username) or not password_ok:
+            self._send_json(401, {"ok": False, "error": "invalid-credentials"})
+            return
+
+        self._send_json(200, {"ok": True, "session": secrets.token_hex(32), "expiresIn": 7200})
 
     def _send_json(self, status: int, payload) -> None:
         body = json.dumps(repair_payload(payload), ensure_ascii=False).encode("utf-8")
