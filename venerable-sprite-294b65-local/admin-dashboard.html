@@ -13,13 +13,13 @@
       <span class="brand-mark" aria-hidden="true"></span>
       <span><strong>VirtuLab - تجربتي</strong><small>
         <span class="lang-fr">Administration de la plateforme</span>
-        <span class="lang-ar">Administration de la plateforme</span>
+        <span class="lang-ar">إدارة المنصة</span>
         <span class="lang-en">Platform administration</span>
       </small></span>
     </a>
     <button class="menu-toggle" type="button" aria-label="Menu"><span></span><span></span><span></span></button>
     <div class="topbar-nav">
-      <div class="student-pill"><span class="lang-fr">Profil</span><span class="lang-ar">Profil</span><span class="lang-en">Profile</span><strong data-student-display></strong></div>
+      <div class="student-pill"><span class="lang-fr">Profil</span><span class="lang-ar">الملف</span><span class="lang-en">Profile</span><strong data-student-display></strong></div>
       <div class="lang-switch" aria-label="Language">
         <button type="button" class="lang-btn" data-lang="fr">FR</button>
         <button type="button" class="lang-btn" data-lang="ar">AR</button>
@@ -27,7 +27,7 @@
       </div>
       <button type="button" class="secondary-btn logout-btn">
         <span class="lang-fr">Se deconnecter</span>
-        <span class="lang-ar">Se deconnecter</span>
+        <span class="lang-ar">تسجيل الخروج</span>
         <span class="lang-en">Log out</span>
       </button>
     </div>
@@ -39,7 +39,7 @@
         <span class="admin-ai-kicker"><span class="admin-icon" aria-hidden="true">AI</span> VirtuLab Control Center</span>
         <h1><span class="lang-fr">Dashboard admin</span><span class="lang-ar">لوحة تحكم المدير</span><span class="lang-en">Admin dashboard</span></h1>
         <p>
-          <span class="lang-fr">Pilotez les eleves, professeurs, classes, laboratoires virtuels et resultats depuis un espace intelligent.</span>
+          <span class="lang-fr">Pilotez les eleves, enseignants, classes, laboratoires virtuels et resultats depuis un espace intelligent.</span>
           <span class="lang-ar">إدارة التلاميذ والأساتذة والأقسام والمخابر الافتراضية والنتائج من فضاء ذكي واحد.</span>
           <span class="lang-en">Manage students, teachers, classes, virtual labs and results from one intelligent workspace.</span>
         </p>
@@ -51,7 +51,7 @@
 
     <div class="teacher-stats-bar admin-stats-bar fade-up delay-1">
       <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">S</span><strong id="admin-stat-students">0</strong><small><span class="lang-fr">Total eleves</span><span class="lang-ar">مجموع التلاميذ</span><span class="lang-en">Total students</span></small></div>
-      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">T</span><strong id="admin-stat-professors">0</strong><small><span class="lang-fr">Total professeurs</span><span class="lang-ar">مجموع الأساتذة</span><span class="lang-en">Total teachers</span></small></div>
+      <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">T</span><strong id="admin-stat-professors">0</strong><small><span class="lang-fr">Total enseignants</span><span class="lang-ar">مجموع الأساتذة</span><span class="lang-en">Total teachers</span></small></div>
       <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">L</span><strong id="admin-stat-labs">0</strong><small><span class="lang-fr">Labs virtuels</span><span class="lang-ar">مخابر افتراضية</span><span class="lang-en">Virtual labs</span></small></div>
       <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">Q</span><strong id="admin-stat-quizzes">0</strong><small><span class="lang-fr">Quiz termines</span><span class="lang-ar">اختبارات منجزة</span><span class="lang-en">Quizzes completed</span></small></div>
       <div class="teacher-stat-card admin-stat-card"><span class="admin-stat-icon" aria-hidden="true">%</span><strong id="admin-stat-success">0%</strong><small><span class="lang-fr">Taux de reussite moyen</span><span class="lang-ar">معدل النجاح</span><span class="lang-en">Average success rate</span></small></div>
@@ -63,34 +63,34 @@
     <section class="admin-dashboard-grid fade-up delay-2">
       <article class="panel-card admin-panel-create">
         <div class="panel-head">
-          <h2><span class="lang-fr">Ajouter un professeur</span><span class="lang-ar">Ajouter un professeur</span><span class="lang-en">Add professor</span></h2>
-          <p><span class="lang-fr">Le professeur pourra se connecter depuis la page enseignant.</span><span class="lang-ar">Le professeur pourra se connecter depuis la page enseignant.</span><span class="lang-en">The professor can sign in from the teacher login page.</span></p>
+          <h2><span class="lang-fr">Ajouter un enseignant</span><span class="lang-ar">إضافة أستاذ</span><span class="lang-en">Add teacher</span></h2>
+          <p><span class="lang-fr">L'enseignant pourra se connecter depuis la page enseignant.</span><span class="lang-ar">سيتمكن الأستاذ من تسجيل الدخول من صفحة الأستاذ.</span><span class="lang-en">The teacher can sign in from the teacher login page.</span></p>
         </div>
         <form id="admin-professor-form" class="code-generator-form">
-          <label>Nom complet<input name="name" type="text" required data-placeholder-fr="Nom du professeur" data-placeholder-ar="Nom du professeur" data-placeholder-en="Professor name"></label>
+          <label>Nom complet<input name="name" type="text" required data-placeholder-fr="Nom de l'enseignant" data-placeholder-ar="Nom de l'enseignant" data-placeholder-en="Professor name"></label>
           <label>Utilisateur<input name="username" type="text" required data-placeholder-fr="ex : prof_svt" data-placeholder-ar="ex : prof_svt" data-placeholder-en="e.g. prof_svt"></label>
           <label>Matiere<input name="subject" type="text" data-placeholder-fr="Sciences, physique..." data-placeholder-ar="Sciences, physique..." data-placeholder-en="Science, physics..."></label>
           <label>Codes classe<input name="classCode" type="text" data-placeholder-fr="CEM2026, LYC2025" data-placeholder-ar="CEM2026, LYC2025" data-placeholder-en="CEM2026, LYC2025"></label>
-          <p class="form-note">Note : le mot de passe du professeur sera genere automatiquement et affiche une seule fois.</p>
+          <p class="form-note">Note : le mot de passe de l'enseignant sera genere automatiquement et affiche une seule fois.</p>
           <button type="submit" class="primary-btn">Ajouter</button>
         </form>
       </article>
 
       <article class="panel-card admin-panel-requests">
         <div class="panel-head">
-          <h2><span class="lang-fr">Demandes professeurs</span><span class="lang-ar">Demandes professeurs</span><span class="lang-en">Teacher requests</span></h2>
-          <p><span class="lang-fr">Les professeurs qui n'ont pas encore de compte attendent l'acceptation admin.</span><span class="lang-ar">Les professeurs qui n'ont pas encore de compte attendent l'acceptation admin.</span><span class="lang-en">Teachers without an account wait for admin approval.</span></p>
+          <h2><span class="lang-fr">Demandes enseignants</span><span class="lang-ar">طلبات الأساتذة</span><span class="lang-en">Teacher requests</span></h2>
+          <p><span class="lang-fr">Les enseignants qui n'ont pas encore de compte attendent l'acceptation admin.</span><span class="lang-ar">الأساتذة الذين لم يحصلوا على حساب بعد ينتظرون موافقة المدير.</span><span class="lang-en">Teachers without an account wait for admin approval.</span></p>
         </div>
         <div id="admin-teacher-request-list" class="admin-list"></div>
       </article>
 
       <article class="panel-card admin-panel-professors">
         <div class="panel-head">
-          <h2><span class="lang-fr">Gestion des professeurs</span><span class="lang-ar">إدارة الأساتذة</span><span class="lang-en">Teacher management</span></h2>
+          <h2><span class="lang-fr">Gestion des enseignants</span><span class="lang-ar">إدارة الأساتذة</span><span class="lang-en">Teacher management</span></h2>
           <p><span class="lang-fr">Comptes autorises a utiliser le dashboard enseignant.</span><span class="lang-ar">حسابات مسموح لها باستعمال لوحة الأستاذ.</span><span class="lang-en">Accounts allowed to use the teacher dashboard.</span></p>
         </div>
         <div class="admin-tools">
-          <label class="admin-search"><span class="admin-tool-icon" aria-hidden="true">⌕</span><input type="search" data-admin-search="admin-professor-list" data-placeholder-fr="Rechercher professeur, matiere, code..." data-placeholder-ar="ابحث عن أستاذ أو مادة أو رمز..." data-placeholder-en="Search teacher, subject, code..."></label>
+          <label class="admin-search"><span class="admin-tool-icon" aria-hidden="true">⌕</span><input type="search" data-admin-search="admin-professor-list" data-placeholder-fr="Rechercher enseignant, matiere, code..." data-placeholder-ar="ابحث عن أستاذ أو مادة أو رمز..." data-placeholder-en="Search teacher, subject, code..."></label>
         </div>
         <div id="admin-professor-list" class="admin-list"></div>
       </article>
@@ -98,10 +98,10 @@
       <article class="panel-card">
         <div class="panel-head">
           <h2><span class="lang-fr">Gestion des codes classe</span><span class="lang-ar">إدارة رموز الأقسام</span><span class="lang-en">Class code management</span></h2>
-          <p><span class="lang-fr">Chaque code avec son professeur et les etudiants lies.</span><span class="lang-ar">كل رمز مع الأستاذ والتلاميذ المرتبطين به.</span><span class="lang-en">Each code with its teacher and linked students.</span></p>
+          <p><span class="lang-fr">Chaque code avec son enseignant et les etudiants lies.</span><span class="lang-ar">كل رمز مع الأستاذ والتلاميذ المرتبطين به.</span><span class="lang-en">Each code with its teacher and linked students.</span></p>
         </div>
         <div class="admin-tools">
-          <label class="admin-search"><span class="admin-tool-icon" aria-hidden="true">⌕</span><input type="search" data-admin-search="admin-class-list" data-placeholder-fr="Filtrer par code, niveau, professeur..." data-placeholder-ar="تصفية حسب الرمز أو المستوى أو الأستاذ..." data-placeholder-en="Filter by code, level, teacher..."></label>
+          <label class="admin-search"><span class="admin-tool-icon" aria-hidden="true">⌕</span><input type="search" data-admin-search="admin-class-list" data-placeholder-fr="Filtrer par code, niveau, enseignant..." data-placeholder-ar="تصفية حسب الرمز أو المستوى أو الأستاذ..." data-placeholder-en="Filter by code, level, teacher..."></label>
         </div>
         <div id="admin-class-list" class="admin-list"></div>
       </article>

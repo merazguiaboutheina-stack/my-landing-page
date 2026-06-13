@@ -531,6 +531,7 @@ function applyLanguage(lang) {
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   localStorage.setItem(STORAGE.language, lang);
+  localStorage.setItem("edu-lang", lang);
   document.querySelectorAll(".lang-btn").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === lang);
   });
@@ -1284,7 +1285,7 @@ function renderSubjects(level) {
     subjectGrid.classList.remove("empty-state");
     subjectGrid.innerHTML = `
       <button type="button" class="selection-card subject-card active" data-code="${escapeHtml(assignment.code)}">
-        <strong>${dualText("Activite de ton professeur", "نشاط أستاذك")}</strong>
+        <strong>${dualText("Activite de ton enseignant", "نشاط أستاذك")}</strong>
         <span class="subject-hint">${escapeHtml(getText(experiment.title))}</span>
         <span>${dualText(`Code : ${assignment.code}`, `الرمز: ${assignment.code}`)}</span>
       </button>
@@ -1393,7 +1394,7 @@ function initExperiences() {
   if (assignment) {
     const experiment = getExperimentConfig(assignment.experimentId);
     summary.innerHTML = dualText(
-      `Code ${assignment.code} : une seule activite assignee par le professeur, ${experiment.title.fr}.`,
+      `Code ${assignment.code} : une seule activite assignee par l'enseignant, ${experiment.title.fr}.`,
       `الرمز ${assignment.code}: نشاط واحد فقط حدده الأستاذ، ${experiment.title.ar}.`
     );
   } else {
@@ -1428,7 +1429,7 @@ function initLevelExperiences() {
   if (assignment) {
     const experiment = getExperimentConfig(assignment.experimentId);
     summary.innerHTML = dualText(
-      `Code ${assignment.code} : une seule activité assignée par le professeur, ${experiment.title.fr}.`,
+      `Code ${assignment.code} : une seule activité assignée par l'enseignant, ${experiment.title.fr}.`,
       `الرمز ${assignment.code}: نشاط واحد فقط حدده الأستاذ، ${experiment.title.ar}.`,
       `Code ${assignment.code}: one activity assigned by the teacher, ${experiment.title.en || experiment.title.fr}.`
     );
@@ -1939,24 +1940,7 @@ function initExperimentPage() {
   if (experimentId === "chimie") initChemistryExperiment();
 }
 
-function initResultPage() {
-  const result = readJson(STORAGE.lastResult, null);
-  if (!result) return (window.location.href = "experiences.html");
-  const title = document.querySelector("[data-result-title]");
-  const score = document.querySelector("[data-result-score]");
-  const badge = document.querySelector("[data-result-badge]");
-  const summary = document.querySelector("[data-result-summary]");
-  const tip = document.querySelector("[data-result-tip]");
-  const steps = document.querySelector("[data-result-steps]");
-  const errors = document.querySelector("[data-result-errors]");
-  if (title) title.textContent = getText(result.title);
-  if (score) score.textContent = result.score;
-  if (badge) badge.textContent = getText(result.badge);
-  if (summary) summary.textContent = getText({ fr: `Vous avez complete ${result.stepsCompleted} etapes sur 5 avec un score de ${result.score}/100.`, ar: `أكملت ${result.stepsCompleted} خطوات من أصل 5 بنتيجة ${result.score}/100.` });
-  if (tip) tip.textContent = getText(result.tip);
-  if (steps) steps.textContent = String(result.stepsCompleted);
-  if (errors) errors.textContent = String(result.errors.length);
-}
+/* commented out first initResultPage duplicate */
 
 EXPERIMENTS.plante.quiz = [
   {
@@ -2524,61 +2508,14 @@ function initTeacherLogin() {
       return;
     }
     alert(getText({
-      fr: "Identifiants incorrects. Utilisez le compte professeur cree par l'admin.",
+      fr: "Identifiants incorrects. Utilisez le compte enseignant cree par l'admin.",
       ar: "بيانات غير صحيحة. استعمل حساب أستاذ أنشأه المدير.",
       en: "Incorrect credentials. Use the professor account created by admin."
     }));
   });
 }
 
-function getTeacherRows() {
-  const rows = [];
-  const studentName = localStorage.getItem(STORAGE.studentName);
-  const studentClass = localStorage.getItem(STORAGE.studentClass) || "CEM2026";
-  const studentLevel = normalizeLevelKey(localStorage.getItem(STORAGE.currentLevel) || "cem");
-  const experimentScores = readJson(STORAGE.experimentScores, {});
-  const lastResult = readJson(STORAGE.lastResult, null);
-  const scoreEntries = Object.entries(experimentScores);
-  if (studentName && scoreEntries.length > 0) {
-    scoreEntries.forEach(([experimentId, score]) => {
-      rows.push({
-        studentName,
-        classCode: studentClass,
-        level: studentLevel,
-        experimentId,
-        score,
-        aiEvaluation: scoreToBadge(score),
-        errors: lastResult && lastResult.experimentId === experimentId ? lastResult.errors : [getExperimentConfig(experimentId).defaultTip]
-      });
-    });
-  } else if (studentName && scoreEntries.length === 0) {
-    rows.push({
-      studentName,
-      classCode: studentClass,
-      level: studentLevel,
-      experimentId: null,
-      score: 0,
-      aiEvaluation: { fr: "En attente", ar: "في الانتظار" },
-      errors: []
-    });
-  }
-  const registeredStudents = readJson(STORAGE.students, []);
-  registeredStudents.forEach((student) => {
-    const alreadyListed = rows.some((r) => r.studentName === student.name && r.classCode === student.classCode);
-    if (!alreadyListed) {
-      rows.push({
-        studentName: student.name,
-        classCode: student.classCode,
-        level: normalizeLevelKey(student.level || "cem"),
-        experimentId: null,
-        score: 0,
-        aiEvaluation: { fr: "En attente", ar: "في الانتظار" },
-        errors: []
-      });
-    }
-  });
-  return rows;
-}
+/* commented out first getTeacherRows duplicate */
 
 function getTeacherRows() {
   syncStudentTrackingStore();
@@ -2767,8 +2704,11 @@ function getStudentRankRows(rows = getTeacherRows()) {
     };
     const labScore = Number(item.labScore);
     const quizScore = Number(item.quizScore);
-    if (Number.isFinite(labScore)) existing.scores.push(labScore);
-    if (Number.isFinite(quizScore)) existing.scores.push(quizScore);
+    if (Number.isFinite(labScore) || Number.isFinite(quizScore)) {
+      const ls = Number.isFinite(labScore) ? labScore : 0;
+      const qs = Number.isFinite(quizScore) ? quizScore : 0;
+      existing.scores.push(Math.round((ls + qs) / 2));
+    }
     byStudent.set(key, existing);
   });
   return [...byStudent.values()]
@@ -2802,7 +2742,10 @@ function renderTeacherTable(rows) {
 function renderLabCodeList() {
   const list = document.getElementById("lab-code-list");
   if (!list) return;
-  const codes = readLabCodes().filter((item) => getAssignmentType(item) === "promo");
+  const currentTeacher = String(localStorage.getItem(STORAGE.currentTeacher) || "").trim().toLowerCase();
+  const codes = readLabCodes()
+    .filter((item) => getAssignmentType(item) === "promo")
+    .filter((item) => String(item.ownerTeacher || "").trim().toLowerCase() === currentTeacher);
   if (!codes.length) {
     list.innerHTML = `
       <div class="empty-card">
@@ -2964,30 +2907,7 @@ function updateTeacherStats(rows) {
   if (statCodes) statCodes.textContent = codes.length;
 }
 
-function initTeacherDashboard() {
-  if (localStorage.getItem(STORAGE.teacherLogged) !== "true") return (window.location.href = "prof-login.html");
-  const rows = getTeacherRows();
-  let descending = true;
-  const filterInput = document.getElementById("class-filter");
-  const sortButton = document.getElementById("sort-score-btn");
-
-  function applyFilters() {
-    const query = filterInput ? filterInput.value.trim().toLowerCase() : "";
-    let filtered = rows.filter((row) => row.classCode.toLowerCase().includes(query));
-    filtered = filtered.sort((a, b) => descending ? b.score - a.score : a.score - b.score);
-    renderTeacherTable(filtered);
-    renderTeacherInsights(filtered);
-    updateTeacherStats(rows);
-  }
-
-  if (filterInput) filterInput.addEventListener("input", applyFilters);
-  if (sortButton) sortButton.addEventListener("click", () => {
-    descending = !descending;
-    applyFilters();
-  });
-  initLabCodeGenerator();
-  applyFilters();
-}
+/* commented out first initTeacherDashboard duplicate */
 
 Object.keys(SUBJECTS).forEach((key) => {
   delete SUBJECTS[key];
@@ -3653,7 +3573,7 @@ function initLevelExperiences() {
   if (assignment && getAssignmentType(assignment) === "single") {
     const experiment = getExperimentConfig(assignment.experimentId);
     summary.innerHTML = dualText(
-      `Code ${assignment.code} : une seule activite assignee par le professeur, ${experiment.title.fr}.`,
+      `Code ${assignment.code} : une seule activite assignee par l'enseignant, ${experiment.title.fr}.`,
       `Code ${assignment.code}: one teacher activity, ${experiment.title.en || experiment.title.fr}.`,
       `Code ${assignment.code}: one activity assigned by the teacher, ${experiment.title.en || experiment.title.fr}.`
     );
@@ -3855,7 +3775,7 @@ function renderSubjects(level) {
     subjectGrid.classList.remove("empty-state");
     subjectGrid.innerHTML = `
       <button type="button" class="selection-card subject-card active" data-code="${escapeHtml(assignment.code)}">
-        <strong>${dualText("Activite de ton professeur", "نشاط أستاذك", "Teacher activity")}</strong>
+        <strong>${dualText("Activite de ton enseignant", "نشاط أستاذك", "Teacher activity")}</strong>
         <span class="subject-hint">${escapeHtml(getText(experiment.title))}</span>
         <span>${dualText(`Code : ${assignment.code}`, `الرمز: ${assignment.code}`, `Code: ${assignment.code}`)}</span>
       </button>
@@ -3948,6 +3868,52 @@ function initDashboard() {
   }
   renderDashboardLevelSummary(savedLevel);
   renderSubjects(savedLevel);
+  renderDashboardScorePanel();
+}
+
+function renderDashboardScorePanel() {
+  const panel = document.getElementById("dashboard-score-panel");
+  if (!panel) return;
+  const result = readJson(STORAGE.lastResult, null);
+  if (!result || (!result.experimentId && !result.score)) {
+    panel.innerHTML = "";
+    return;
+  }
+  const labScore = Number(result.score || 0);
+  const quizScore = Number.isFinite(Number(result.quizScore)) ? Number(result.quizScore) : null;
+  const finalNote = quizScore !== null ? Math.round((labScore + quizScore) / 2) : labScore;
+  const badge = scoreToBadge(finalNote);
+  const expTitle = result.title ? getText(result.title) : (result.experimentId || "");
+  panel.innerHTML = `
+    <article class="panel-card fade-up" style="margin-bottom:20px;">
+      <div class="panel-head">
+        <h2>${escapeHtml(getText({ fr: "Derniere note", ar: "آخر نتيجة", en: "Latest score" }))}</h2>
+        <p>${escapeHtml(expTitle)}</p>
+      </div>
+      <div class="result-stats" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;">
+        <div class="stat-tile">
+          <strong style="font-size:2rem;color:var(--teal)">${escapeHtml(String(finalNote))}<span style="font-size:1rem">/100</span></strong>
+          <span>${escapeHtml(getText({ fr: "Note finale (moyenne)", ar: "النتيجة النهائية (المعدل)", en: "Final note (average)" }))}</span>
+        </div>
+        <div class="stat-tile">
+          <strong>${escapeHtml(String(labScore))}/100</strong>
+          <span>${escapeHtml(getText({ fr: "Score labo", ar: "نقطة المخبر", en: "Lab score" }))}</span>
+        </div>
+        <div class="stat-tile">
+          <strong>${quizScore !== null ? escapeHtml(String(quizScore)) + "/100" : escapeHtml(getText({ fr: "Non passe", ar: "لم يُنجز", en: "Not done" }))}</strong>
+          <span>${escapeHtml(getText({ fr: "Score quiz", ar: "نقطة الاختبار", en: "Quiz score" }))}</span>
+        </div>
+        <div class="stat-tile">
+          <strong>${escapeHtml(getText(badge))}</strong>
+          <span>${escapeHtml(getText({ fr: "Appreciation", ar: "التقدير", en: "Grade" }))}</span>
+        </div>
+      </div>
+      <div class="hero-actions" style="margin-top:16px;">
+        <a class="primary-btn" href="quiz.html">${escapeHtml(getText({ fr: "Repasser le quiz", ar: "إعادة الاختبار", en: "Retake quiz" }))}</a>
+        <a class="secondary-btn" href="result.html">${escapeHtml(getText({ fr: "Voir le detail", ar: "عرض التفاصيل", en: "View details" }))}</a>
+      </div>
+    </article>
+  `;
 }
 
 function initStudentForm() {
@@ -4083,6 +4049,7 @@ function initTeacherDashboard() {
   });
 
   initLabCodeGenerator();
+  renderTeacherMetaCodes();
   renderRegisteredStudents();
   applyFilters();
 }
@@ -4093,9 +4060,8 @@ function prepareEmbeddedResult(experimentId) {
   const loaded = !frame || frame.dataset.labLoaded === "true";
   if (!loaded) return;
 
-  for (let step = 1; step <= 5; step += 1) {
-    experimentRuntime.completed.add(step);
-  }
+  // Fix: Do not automatically mark all steps as completed.
+  // Students must check them manually in the sidebar to get a score.
 
   if (experimentRuntime.seconds < 45) {
     experimentRuntime.seconds = 45;
@@ -4111,35 +4077,7 @@ function finishExperiment() {
   window.location.href = "result.html";
 }
 
-function initResultPage() {
-  const result = readJson(STORAGE.lastResult, null);
-  if (!result) {
-    window.location.href = "experiences.html";
-    return;
-  }
-
-  const title = document.querySelector("[data-result-title]");
-  const score = document.querySelector("[data-result-score]");
-  const badge = document.querySelector("[data-result-badge]");
-  const summary = document.querySelector("[data-result-summary]");
-  const tip = document.querySelector("[data-result-tip]");
-  const steps = document.querySelector("[data-result-steps]");
-  const errors = document.querySelector("[data-result-errors]");
-
-  if (title) title.textContent = getText(result.title);
-  if (score) score.textContent = String(result.score);
-  if (badge) badge.textContent = getText(result.badge);
-  if (summary) {
-    summary.textContent = getText({
-      fr: `Vous avez termine ${result.stepsCompleted} etapes sur 5 avec un score de ${result.score}/100.`,
-      ar: `أنهيت ${result.stepsCompleted} خطوات من أصل 5 بنتيجة ${result.score}/100.`,
-      en: `You completed ${result.stepsCompleted} out of 5 steps with a score of ${result.score}/100.`
-    });
-  }
-  if (tip) tip.textContent = getText(result.tip);
-  if (steps) steps.textContent = String(result.stepsCompleted);
-  if (errors) errors.textContent = String(result.errors.length);
-}
+/* commented out second initResultPage duplicate */
 
 function renderStudentResultHistory() {
   const main = document.querySelector("main");
@@ -4191,27 +4129,29 @@ function initResultPage() {
   const errors = document.querySelector("[data-result-errors]");
   const stats = document.querySelector(".result-stats");
 
+  const labScore = Number(result.score || 0);
+  const quizScore = Number.isFinite(Number(result.quizScore)) ? Number(result.quizScore) : null;
+  const finalNote = quizScore !== null ? Math.round((labScore + quizScore) / 2) : labScore;
+
   if (title) title.textContent = getText(result.title);
-  if (score) score.textContent = String(result.score || 0);
-  if (badge) badge.textContent = getText(result.badge || scoreToBadge(result.score || 0));
+  if (score) score.textContent = String(finalNote);
+  if (badge) badge.textContent = getText(result.badge || scoreToBadge(finalNote));
   if (summary) {
     summary.textContent = getText({
-      fr: `Vous avez termine ${result.stepsCompleted || 0} etapes sur 5 avec un score labo de ${result.score || 0}/100 et un score quiz de ${result.quizScore ?? "-"}/100.`,
-      ar: `Score labo ${result.score || 0}/100 - score quiz ${result.quizScore ?? "-"}/100.`,
-      en: `You completed ${result.stepsCompleted || 0} of 5 steps with a lab score of ${result.score || 0}/100 and a quiz score of ${result.quizScore ?? "-"}/100.`
+      fr: `Score labo : ${labScore}/100 — Score quiz : ${quizScore !== null ? quizScore : "non passe"}/100 — Note finale : ${finalNote}/100.`,
+      ar: `نقطة المخبر: ${labScore}/100 — نقطة الاختبار: ${quizScore !== null ? quizScore : "لم يُنجز"}/100 — النتيجة النهائية: ${finalNote}/100.`,
+      en: `Lab score: ${labScore}/100 — Quiz score: ${quizScore !== null ? quizScore : "not done"}/100 — Final note: ${finalNote}/100.`
     });
   }
   if (tip) tip.textContent = getText(result.tip);
   if (steps) steps.textContent = String(result.stepsCompleted || 0);
   if (errors) errors.textContent = String((result.errors || []).length);
-  if (stats && !stats.querySelector("[data-result-quiz]")) {
-    stats.insertAdjacentHTML("beforeend", `
-      <div class="stat-tile"><strong data-result-quiz>${escapeHtml(String(result.quizScore ?? "-"))}</strong><span>${escapeHtml(getText({ fr: "score quiz", ar: "score quiz", en: "quiz score" }))}</span></div>
-    `);
-  } else {
-    const quiz = document.querySelector("[data-result-quiz]");
-    if (quiz) quiz.textContent = String(result.quizScore ?? "-");
-  }
+  const labScoreTile = document.querySelector("[data-result-lab-score]");
+  if (labScoreTile) labScoreTile.textContent = `${labScore}/100`;
+  const quizTile = document.querySelector("[data-result-quiz]");
+  if (quizTile) quizTile.textContent = quizScore !== null ? `${quizScore}/100` : getText({ fr: "Non passe", ar: "لم يُنجز", en: "Not done" });
+  const finalTile = document.querySelector("[data-result-final]");
+  if (finalTile) finalTile.textContent = `${finalNote}/100`;
   renderStudentResultHistory();
 }
 
@@ -4382,10 +4322,18 @@ function renderQuizResult(state, config, options = {}) {
       </div>
       <div class="hero-actions">
         <a class="primary-btn" href="result.html">${escapeHtml(getText({ fr: "Voir le resultat complet", ar: "عرض النتيجة الكاملة", en: "View full result" }))}</a>
+        <button type="button" class="secondary-btn" id="quiz-retake-btn">${escapeHtml(getText({ fr: "Repasser le quiz", ar: "إعادة الاختبار", en: "Retake quiz" }))}</button>
         <a class="secondary-btn" href="dashboard.html">${escapeHtml(getText({ fr: "Retour au tableau de bord", ar: "العودة إلى لوحة التحكم", en: "Back to dashboard" }))}</a>
       </div>
     </div>
   `;
+  const retakeBtn = document.getElementById("quiz-retake-btn");
+  if (retakeBtn) {
+    retakeBtn.addEventListener("click", () => {
+      activeQuizState = null;
+      initQuizPage();
+    });
+  }
 }
 
 function initTeacherLogin() {
@@ -4427,8 +4375,8 @@ function initTeacherLogin() {
       }
     }
     alert(getText({
-      fr: "Identifiants incorrects. Utilisez le compte professeur cree par l'admin.",
-      ar: "Identifiants incorrects. Utilisez le compte professeur cree par l'admin.",
+      fr: "Identifiants incorrects. Utilisez le compte enseignant cree par l'admin.",
+      ar: "Identifiants incorrects. Utilisez le compte enseignant cree par l'admin.",
       en: "Incorrect credentials. Use the professor account created by admin."
     }));
   });
@@ -4450,7 +4398,7 @@ function initTeacherLogin() {
 
     const professors = readProfessors();
     if (professors.some((item) => String(item.email || "").toLowerCase() === email || String(item.name || "").toLowerCase() === name.toLowerCase())) {
-      alert(getText({ fr: "Un compte professeur existe deja pour ces informations. Connectez-vous avec le code fourni.", ar: "Un compte professeur existe deja pour ces informations. Connectez-vous avec le code fourni.", en: "A teacher account already exists for this information. Log in with the provided code." }));
+      alert(getText({ fr: "Un compte enseignant existe deja pour ces informations. Connectez-vous avec le code fourni.", ar: "Un compte enseignant existe deja pour ces informations. Connectez-vous avec le code fourni.", en: "A teacher account already exists for this information. Log in with the provided code." }));
       return;
     }
 
@@ -4560,7 +4508,10 @@ function renderAdminActivity() {
 function renderAdminDashboard() {
   const professors = readProfessors();
   const students = readJson(STORAGE.students, []);
-  const codes = readLabCodes().filter((item) => getAssignmentType(item) === "promo");
+  const currentTeacher = String(localStorage.getItem(STORAGE.currentTeacher) || "").trim().toLowerCase();
+  const codes = readLabCodes()
+    .filter((item) => getAssignmentType(item) === "promo")
+    .filter((item) => String(item.ownerTeacher || "").trim().toLowerCase() === currentTeacher);
   const rows = getTeacherRows();
   const completed = rows.filter((row) => row.experimentId).length;
   const statProfessors = document.getElementById("admin-stat-professors");
@@ -4592,7 +4543,7 @@ function adminClassCodes() {
     professorClassCodes(professor).forEach((code) => {
       if (!code) return;
       const key = normalizeLabCode(code);
-      const existing = codeMap.get(key) || { code, level: "cem", source: "Code professeur", labs: [] };
+      const existing = codeMap.get(key) || { code, level: "cem", source: "Code enseignant", labs: [] };
       existing.professor = professor;
       codeMap.set(key, existing);
     });
@@ -4625,9 +4576,10 @@ function studentsForClassCode(code) {
 }
 
 function professorClassCodes(professor) {
-  const raw = String(professor?.classCode || "DIRECT");
+  if (!professor || !professor.classCode) return [];
+  const raw = String(professor.classCode);
   const codes = raw.split(/[,; ]+/).map((item) => normalizeLabCode(item)).filter(Boolean);
-  return codes.length ? [...new Set(codes)] : ["DIRECT"];
+  return [...new Set(codes)];
 }
 
 function currentTeacherProfile() {
@@ -4643,42 +4595,13 @@ function currentTeacherManagedCodes() {
   if (hasValidAdminSession()) return null;
   const professor = currentTeacherProfile();
   const current = String(localStorage.getItem(STORAGE.currentTeacher) || "").trim().toLowerCase();
-  const profileCodes = professor ? professorClassCodes(professor).map((code) => normalizeLabCode(code || "DIRECT") || "DIRECT") : [];
+  const profileCodes = professor ? professorClassCodes(professor).map((code) => normalizeLabCode(code) || "").filter(Boolean) : [];
   const labCodes = readLabCodes();
   const ownedCodes = labCodes
     .filter((code) => String(code.ownerTeacher || "").trim().toLowerCase() === current)
-    .map((code) => normalizeLabCode(code.code || "DIRECT") || "DIRECT");
-  const profileManagedLegacyCodes = labCodes
-    .filter((code) => {
-      if (getAssignmentType(code) !== "promo") return false;
-      const owner = String(code.ownerTeacher || "").trim().toLowerCase();
-      if (owner) return false;
-      const normalizedCode = normalizeLabCode(code.code || "DIRECT") || "DIRECT";
-      return profileCodes.includes(normalizedCode);
-    })
-    .map((code) => normalizeLabCode(code.code || "DIRECT") || "DIRECT");
-  const linkedResultCodes = readResultHistory()
-    .map((item) => normalizeLabCode(item.classCode || ""))
-    .filter((code) => {
-      if (!code || code === "DIRECT") return false;
-      const assignment = findLabCodeAssignment(code);
-      if (!assignment) return profileCodes.includes(code);
-      const owner = String(assignment.ownerTeacher || "").trim().toLowerCase();
-      if (owner) return owner === current;
-      return profileCodes.includes(code);
-    });
-  const linkedStudentCodes = readJson(STORAGE.students, [])
-    .flatMap((student) => [student.classCode, student.activeCode])
-    .map((code) => normalizeLabCode(code || ""))
-    .filter((code) => {
-      if (!code || code === "DIRECT") return false;
-      const assignment = findLabCodeAssignment(code);
-      if (!assignment) return profileCodes.includes(code);
-      const owner = String(assignment.ownerTeacher || "").trim().toLowerCase();
-      if (owner) return owner === current;
-      return profileCodes.includes(code);
-    });
-  return [...new Set([...profileCodes, ...ownedCodes, ...profileManagedLegacyCodes, ...linkedResultCodes, ...linkedStudentCodes])];
+    .map((code) => normalizeLabCode(code.code) || "")
+    .filter(Boolean);
+  return [...new Set([...profileCodes, ...ownedCodes])];
 }
 
 function canTeacherManageStudent(student) {
@@ -4844,7 +4767,7 @@ function renderAdminProfessors() {
   if (!target) return;
   const professors = readProfessors();
   if (!professors.length) {
-    target.innerHTML = `<div class="empty-card">${escapeHtml(getText({ fr: "Aucun professeur cree pour le moment.", ar: "لم يتم إنشاء أي أستاذ بعد.", en: "No teacher account yet." }))}</div>`;
+    target.innerHTML = `<div class="empty-card">${escapeHtml(getText({ fr: "Aucun enseignant cree pour le moment.", ar: "لم يتم إنشاء أي أستاذ بعد.", en: "No teacher account yet." }))}</div>`;
     return;
   }
   target.innerHTML = professors.map((professor, index) => {
@@ -4858,11 +4781,17 @@ function renderAdminProfessors() {
             <p>${escapeHtml(professor.subject || "Sciences")}</p>
             <code>${escapeHtml(professor.username || "")}</code>
           </div>
-          <button type="button" class="secondary-btn" data-remove-professor="${index}">${escapeHtml(getText({ fr: "Supprimer", ar: "Supprimer", en: "Remove" }))}</button>
+          <button type="button" class="secondary-btn danger-soft-btn" data-remove-professor="${index}">${escapeHtml(getText({ fr: "Supprimer", ar: "حذف", en: "Remove" }))}</button>
         </div>
         <div class="admin-linked-block">
           ${codes.map((code) => `<span class="badge badge-light">${escapeHtml(code)}</span>`).join("")}
           <span>${escapeHtml(String(linkedStudents.length))} ${escapeHtml(getText({ fr: "etudiant(s) lies", ar: "تلميذ مرتبط", en: "linked student(s)" }))}</span>
+        </div>
+        <div class="admin-password-reset-row" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+          <input type="password" id="admin-reset-pwd-${index}" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid var(--border,#ddd);"
+            data-placeholder-fr="Nouveau mot de passe" data-placeholder-ar="كلمة المرور الجديدة" data-placeholder-en="New password"
+            placeholder="${escapeHtml(getText({ fr: "Nouveau mot de passe", ar: "كلمة المرور الجديدة", en: "New password" }))}">
+          <button type="button" class="secondary-btn" data-reset-professor="${index}">${escapeHtml(getText({ fr: "Changer mot de passe", ar: "تغيير كلمة المرور", en: "Change password" }))}</button>
         </div>
       </article>
     `;
@@ -4872,6 +4801,23 @@ function renderAdminProfessors() {
       const next = readProfessors().filter((_, index) => index !== Number(button.dataset.removeProfessor));
       writeProfessors(next);
       renderAdminDashboard();
+    });
+  });
+  target.querySelectorAll("[data-reset-professor]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const idx = Number(button.dataset.resetProfessor);
+      const input = document.getElementById(`admin-reset-pwd-${idx}`);
+      const newPassword = String(input ? input.value : "").trim();
+      if (!newPassword) {
+        alert(getText({ fr: "Veuillez entrer un nouveau mot de passe.", ar: "الرجاء إدخال كلمة مرور جديدة.", en: "Please enter a new password." }));
+        return;
+      }
+      const professors = readProfessors();
+      if (!professors[idx]) return;
+      professors[idx].password = await hashSecret(newPassword);
+      writeProfessors(professors);
+      if (input) input.value = "";
+      alert(getText({ fr: "Mot de passe modifie avec succes.", ar: "تم تغيير كلمة المرور بنجاح.", en: "Password changed successfully." }));
     });
   });
 }
@@ -4887,7 +4833,7 @@ function renderAdminClasses() {
   target.innerHTML = classes.map((item) => {
     const students = studentsForClassCode(item.code);
     const level = LEVEL_LABELS[normalizeLevelKey(item.level)] || LEVEL_LABELS.cem;
-    const professorName = item.professor ? (item.professor.name || item.professor.username) : getText({ fr: "Aucun professeur lie", ar: "لا يوجد أستاذ مرتبط", en: "No linked teacher" });
+    const professorName = item.professor ? (item.professor.name || item.professor.username) : getText({ fr: "Aucun enseignant lie", ar: "لا يوجد أستاذ مرتبط", en: "No linked teacher" });
     const labs = item.labs.length ? item.labs.map((lab) => getText(getExperimentConfig(lab).title)).join(", ") : getText({ fr: "Tous / libre", ar: "الكل / حر", en: "All / open" });
     return `
       <article class="admin-list-card admin-list-card-column">
@@ -4895,7 +4841,7 @@ function renderAdminClasses() {
           <div>
             <strong>${escapeHtml(item.code)}</strong>
             <p>${escapeHtml(item.source)} - ${escapeHtml(getText(level))}</p>
-            <p>${escapeHtml(getText({ fr: "Professeur", ar: "الأستاذ", en: "Teacher" }))} : ${escapeHtml(professorName)}</p>
+            <p>${escapeHtml(getText({ fr: "Enseignant", ar: "الأستاذ", en: "Teacher" }))} : ${escapeHtml(professorName)}</p>
             <p>${escapeHtml(getText({ fr: "Labs", ar: "المخابر", en: "Labs" }))} : ${escapeHtml(labs)}</p>
           </div>
           <span class="badge badge-light">${escapeHtml(String(students.length))} ${escapeHtml(getText({ fr: "etudiant(s)", ar: "تلميذ", en: "student(s)" }))}</span>
@@ -5134,8 +5080,8 @@ function rejectTeacherRequest(index) {
   const request = requests[index];
   if (!request) return;
   const confirmed = window.confirm(getText({
-    fr: `Refuser la demande de ${request.name || "ce professeur"} ?`,
-    ar: `Refuser la demande de ${request.name || "ce professeur"} ?`,
+    fr: `Refuser la demande de ${request.name || "cet enseignant"} ?`,
+    ar: `هل تريد رفض طلب ${request.name || "هذا الأستاذ"}؟`,
     en: `Reject the request from ${request.name || "this teacher"}?`
   }));
   if (!confirmed) return;
@@ -5149,7 +5095,7 @@ function renderAdminTeacherRequests() {
   if (!target) return;
   const requests = readTeacherRequests();
   if (!requests.length) {
-    target.innerHTML = `<div class="empty-card">${escapeHtml(getText({ fr: "Aucune demande en attente.", ar: "Aucune demande en attente.", en: "No pending teacher request." }))}</div>`;
+    target.innerHTML = `<div class="empty-card">${escapeHtml(getText({ fr: "Aucune demande en attente.", ar: "لا توجد طلبات معلقة.", en: "No pending teacher request." }))}</div>`;
     return;
   }
   target.innerHTML = requests.map((request, index) => {
@@ -5165,8 +5111,8 @@ function renderAdminTeacherRequests() {
             <p>${escapeHtml(request.subject || "Sciences")} ${date ? `- ${escapeHtml(date)}` : ""}</p>
           </div>
           <div class="admin-student-actions">
-            <button type="button" class="primary-btn" data-approve-teacher-request="${index}">${escapeHtml(getText({ fr: "Accepter", ar: "Accepter", en: "Accept" }))}</button>
-            <button type="button" class="secondary-btn danger-soft-btn" data-reject-teacher-request="${index}">${escapeHtml(getText({ fr: "Refuser", ar: "Refuser", en: "Reject" }))}</button>
+            <button type="button" class="primary-btn" data-approve-teacher-request="${index}">${escapeHtml(getText({ fr: "Accepter", ar: "قبول", en: "Accept" }))}</button>
+            <button type="button" class="secondary-btn danger-soft-btn" data-reject-teacher-request="${index}">${escapeHtml(getText({ fr: "Refuser", ar: "رفض", en: "Reject" }))}</button>
           </div>
         </div>
       </article>
@@ -5209,24 +5155,24 @@ function renderAdminLogin() {
     <section class="page-shell narrow-shell">
       <article class="form-card admin-login-card">
         <div class="panel-head">
-          <h1>${escapeHtml(getText({ fr: "Connexion admin", ar: "Connexion admin", en: "Admin login" }))}</h1>
+          <h1>${escapeHtml(getText({ fr: "Connexion admin", ar: "تسجيل دخول المدير", en: "Admin login" }))}</h1>
           <p>${escapeHtml(getText({
-            fr: "Acces separe pour gerer les professeurs, les eleves et les details de la plateforme.",
-            ar: "Acces separe pour gerer les professeurs, les eleves et les details de la plateforme.",
-            en: "Separate access for managing professors, students and platform details."
+            fr: "Acces separe pour gerer les enseignants, les eleves et les details de la plateforme.",
+            ar: "وصول منفصل لإدارة الأساتذة والتلاميذ وتفاصيل المنصة.",
+            en: "Separate access for managing teachers, students and platform details."
           }))}</p>
         </div>
         <form id="admin-login-form" class="stack-form">
           <label>
-            ${escapeHtml(getText({ fr: "Nom d'utilisateur", ar: "Nom d'utilisateur", en: "Username" }))}
+            ${escapeHtml(getText({ fr: "Nom d'utilisateur", ar: "اسم المستخدم", en: "Username" }))}
             <input name="username" type="text" required autocomplete="username">
           </label>
           <label>
-            ${escapeHtml(getText({ fr: "Mot de passe", ar: "Mot de passe", en: "Password" }))}
+            ${escapeHtml(getText({ fr: "Mot de passe", ar: "كلمة المرور", en: "Password" }))}
             <input name="password" type="password" required autocomplete="current-password">
           </label>
-          <button class="primary-btn" type="submit">${escapeHtml(getText({ fr: "Entrer dans le dashboard admin", ar: "Entrer dans le dashboard admin", en: "Open admin dashboard" }))}</button>
-          <p class="form-note">${escapeHtml(getText({ fr: "Acces reserve aux administrateurs autorises.", ar: "Acces reserve aux administrateurs autorises.", en: "Access reserved for authorized administrators." }))}</p>
+          <button class="primary-btn" type="submit">${escapeHtml(getText({ fr: "Entrer dans le dashboard admin", ar: "دخول لوحة تحكم المدير", en: "Open admin dashboard" }))}</button>
+          <p class="form-note">${escapeHtml(getText({ fr: "Acces reserve aux administrateurs autorises.", ar: "الوصول مخصص للمسؤولين المعتمدين فقط.", en: "Access reserved for authorized administrators." }))}</p>
         </form>
       </article>
     </section>
@@ -6053,3 +5999,27 @@ function quizTitleText(config) {
 }
 
 document.addEventListener("DOMContentLoaded", initPage);
+
+
+function renderTeacherMetaCodes() {
+  const container = document.getElementById("teacher-meta-container");
+  if (!container) return;
+  const codes = currentTeacherManagedCodes();
+  if (!codes || !codes.length) {
+    container.innerHTML = `
+      <div class="badge badge-light">
+        <span class="lang-fr">Aucun code classe actif</span>
+        <span class="lang-ar">لا توجد رموز أقسام نشطة</span>
+        <span class="lang-en">No active class codes</span>
+      </div>
+    `;
+    return;
+  }
+  container.innerHTML = codes.map(code => `
+    <div class="badge badge-light" style="margin-right: 6px; margin-bottom: 6px;">
+      <span class="lang-fr">Code classe : ${escapeHtml(code)}</span>
+      <span class="lang-ar">رمز القسم: ${escapeHtml(code)}</span>
+      <span class="lang-en">Class code: ${escapeHtml(code)}</span>
+    </div>
+  `).join("");
+}
