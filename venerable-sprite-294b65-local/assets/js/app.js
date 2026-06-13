@@ -608,7 +608,7 @@ function updateSidebarUser() {
   const avatarEl = el('sidebar-avatar');
   if (session) {
     nameEl.textContent = session.displayName || 'أستاذ';
-    roleEl.textContent = 'Professeur';
+    roleEl.textContent = 'Enseignant';
     avatarEl.textContent = (session.displayName || 'P')[0];
   } else {
     nameEl.textContent = getLang() === 'ar' ? 'زائر' : 'Visiteur';

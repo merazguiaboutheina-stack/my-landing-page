@@ -156,7 +156,7 @@ const TRANSLATIONS = {
     navLabs: 'Laboratoires',
     navQuiz: 'Quiz',
     navContact: 'Contact',
-    navProfLogin: 'Espace Professeur',
+    navProfLogin: 'Espace Enseignant',
 
     heroTitle: 'Plateforme d\'Apprentissage Interactif',
     heroSubtitle: 'Explorez les laboratoires virtuels, répondez aux quiz et regardez les simulations scientifiques — sans inscription.',
@@ -190,7 +190,7 @@ const TRANSLATIONS = {
     labViewer: 'Visualisation du Labo',
     closeLab: 'Fermer le Labo',
 
-    profSpace: 'Espace Professeur',
+    profSpace: 'Espace Enseignant',
     dashboard: 'Tableau de Bord',
     login: 'Connexion',
     username: 'Nom d\'utilisateur',

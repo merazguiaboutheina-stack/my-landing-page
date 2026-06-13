@@ -1,0 +1,4 @@
+/api/admin-login  /.netlify/functions/admin-login  200
+/api/chat         /.netlify/functions/gemini-chat  200
+/admin            /admin-login.html                200
+/*                /index.html                      200
